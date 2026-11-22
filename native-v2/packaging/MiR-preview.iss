@@ -48,3 +48,28 @@ Name: desktopicon; Description: "Crear acceso directo en el escritorio"; GroupDe
 
 [Run]
 Filename: "{app}\{#AppExecutable}"; Description: "Iniciar MiR"; Flags: nowait postinstall skipifsilent
+
+[Code]
+// Protección: si el servicio receptor usa archivos bajo MiR, impedimos una
+// desinstalación que dejaría ese servicio apuntando a un ejecutable eliminado.
+function ReceptorDependeDeMiR(const NombreServicio: String): Boolean;
+var
+  Ruta: String;
+begin
+  Result := False;
+  if RegQueryStringValue(HKLM,
+       'SYSTEM\CurrentControlSet\Services\' + NombreServicio,
+       'ImagePath', Ruta) then
+    Result := Pos(Lowercase(ExpandConstant('{app}')), Lowercase(Ruta)) > 0;
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := not (
+    ReceptorDependeDeMiR('RustDesk') or
+    ReceptorDependeDeMiR('MiR') or
+    ReceptorDependeDeMiR('MiRHost')
+  );
+  if not Result then
+    MsgBox('El receptor remoto utiliza archivos de MiR. Para evitar perder acceso, primero desactivá el receptor de forma local y verificá una vía alternativa de conexión. La desinstalación fue cancelada.', mbError, MB_OK);
+end;
