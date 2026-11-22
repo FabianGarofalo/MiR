@@ -1,0 +1,192 @@
+name: MiR V2 | Compilar Windows nativo (CANDIDATO NO VALIDADO)
+
+on:
+  push:
+    paths:
+      - '.github/workflows/construir-mir-v2-windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mir-v2-native-windows
+  cancel-in-progress: false
+
+jobs:
+  generar-puente:
+    name: Generar puente Flutter/Rust (1.5.3)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 110
+    steps:
+      - name: Código de origen fijado
+        uses: actions/checkout@v4
+        with:
+          repository: rustdesk/rustdesk
+          ref: 95cca3f661f635b3cc85c04935fe8d96d8f432ef
+          submodules: recursive
+          persist-credentials: false
+      - name: Instalar dependencias del puente
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake gcc g++ libclang-dev libgtk-3-dev llvm-dev nasm ninja-build pkg-config
+      - name: Rust del puente
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.75"
+          components: rustfmt
+      - name: Flutter del puente
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.22.3"
+      - name: Instalar generadores compatibles con upstream
+        run: |
+          cargo install cargo-expand --version 1.0.95 --locked
+          cargo install flutter_rust_bridge_codegen --version 1.80.1 --features uuid --locked
+      - name: Generar código de puente
+        shell: bash
+        run: |
+          sed -i -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' flutter/pubspec.yaml
+          (cd flutter && flutter pub get)
+          flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart --c-output ./flutter/macos/Runner/bridge_generated.h
+          cp ./flutter/macos/Runner/bridge_generated.h ./flutter/ios/Runner/bridge_generated.h
+      - name: Publicar puente
+        uses: actions/upload-artifact@v4
+        with:
+          name: mir-v2-bridge-generado
+          path: |
+            src/bridge_generated.rs
+            src/bridge_generated.io.rs
+            flutter/lib/generated_bridge.dart
+            flutter/lib/generated_bridge.freezed.dart
+            flutter/macos/Runner/bridge_generated.h
+            flutter/ios/Runner/bridge_generated.h
+          if-no-files-found: error
+  compilar-windows:
+    name: MiR Windows x64 (preview sin firmar)
+    needs: generar-puente
+    runs-on: windows-2022
+    timeout-minutes: 140
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows-static
+    steps:
+      - name: Código MiR
+        uses: actions/checkout@v4
+        with:
+          path: mir
+      - name: Base nativa fijada
+        uses: actions/checkout@v4
+        with:
+          repository: rustdesk/rustdesk
+          ref: 95cca3f661f635b3cc85c04935fe8d96d8f432ef
+          path: upstream
+          submodules: recursive
+          persist-credentials: false
+      - name: Recuperar puente Flutter/Rust
+        uses: actions/download-artifact@v4
+        with:
+          name: mir-v2-bridge-generado
+          path: upstream
+      - name: Adaptar identidad y barra real de MiR
+        shell: pwsh
+        run: |
+          python mir/native-v2/stage_components.py --upstream upstream --components mir/native_pending/lib --report mir/native-v2/integration-report.json
+          python mir/native-v2/apply_mir_native.py --upstream upstream --repo mir --report mir/native-v2/native-patch-report.json
+          python mir/native-v2/verify_native_patch.py --upstream upstream
+      - name: Instalar LLVM
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "15.0.6"
+      - name: Flutter Windows 3.24.5
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.24.5"
+      - name: Motor Flutter Windows del origen
+        shell: pwsh
+        run: |
+          flutter precache --windows
+          $bin = (Get-Command flutter).Source
+          $flutterRoot = Split-Path (Split-Path $bin -Parent) -Parent
+          Invoke-WebRequest -Uri "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip" -OutFile "engine-win.zip"
+          Expand-Archive -Path "engine-win.zip" -DestinationPath "engine-expanded"
+          Copy-Item "engine-expanded/*" (Join-Path $flutterRoot "bin/cache/artifacts/engine/windows-x64-release") -Recurse -Force
+      - name: Parche de Flutter usado por el motor original
+        shell: bash
+        run: |
+          FLUTTER_ROOT="$(dirname "$(dirname "$(which flutter)")")"
+          git -C "$FLUTTER_ROOT" apply "$GITHUB_WORKSPACE/upstream/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+      - name: Rust Windows del motor
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.75"
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt
+      - name: Vcpkg compatible con motor
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: C:\vcpkg
+          vcpkgGitCommitId: 9e593bb18ea69cc5095e012465dcd675a822ed0d
+          doNotCache: false
+      - name: Dependencias nativas Windows
+        shell: bash
+        working-directory: upstream
+        env:
+          VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
+        run: |
+          "$VCPKG_ROOT/vcpkg" install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"
+      - name: Compilar cliente Windows nativo
+        shell: pwsh
+        working-directory: upstream
+        run: |
+          python build.py --portable --flutter --skip-portable-pack --hwcodec --vram
+      - name: Preparar portable con bibliotecas, marca y licencia
+        shell: pwsh
+        run: |
+          $src = "upstream/flutter/build/windows/x64/runner/Release"
+          if (!(Test-Path "$src/rustdesk.exe")) { throw "No se encontró el ejecutable nativo de origen; se rechaza un paquete vacío" }
+          New-Item -ItemType Directory "mir/native-v2/dist/portable" -Force | Out-Null
+          Copy-Item "$src/*" "mir/native-v2/dist/portable/" -Recurse -Force
+          Copy-Item "upstream/LICENCE" "mir/native-v2/dist/portable/LICENCE" -Force
+          Copy-Item "mir/legacy-v1.5/payload/MiRemoto.ico" "mir/native-v2/dist/portable/MiR.ico" -Force
+          @'
+          MiR V2 — CANDIDATO NATIVO SIN VALIDACIÓN
+          Desarrollado por EcoEtika S.A.S. | Distribución gratuita
+          Desarrollado sobre la base de RustDesk. Ver LICENCE y avisos del origen.
+          NO se verificó recepción antes del PIN, desinstalación del cliente anterior, Android ni firma digital.
+          No desinstales tu software remoto actual hasta realizar pruebas locales.
+          '@ | Set-Content -Path "mir/native-v2/dist/portable/LEER_ANTES_DE_USAR.txt" -Encoding utf8
+          Compress-Archive -Path "mir/native-v2/dist/portable/*" -DestinationPath "mir/native-v2/dist/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip" -Force
+      - name: Instalar Inno Setup si falta
+        shell: pwsh
+        run: |
+          if (!(Test-Path "C:/Program Files (x86)/Inno Setup 6/ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+      - name: Crear instalador (sin migración automática del receptor)
+        shell: pwsh
+        run: |
+          $iscc = "C:/Program Files (x86)/Inno Setup 6/ISCC.exe"
+          if (!(Test-Path $iscc)) { throw "No se encontró Inno Setup" }
+          $source = (Resolve-Path "mir/native-v2/dist/portable").Path
+          & $iscc "/DSourceDir=$source" "mir/native-v2/packaging/MiR-preview.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Falló empaquetado de Inno Setup" }
+      - name: Inventario y hashes SHA-256
+        shell: pwsh
+        run: |
+          Get-ChildItem "mir/native-v2/dist" -File |
+            Get-FileHash -Algorithm SHA256 |
+            Select-Object Path,Hash |
+            ConvertTo-Json -Depth 3 |
+            Set-Content "mir/native-v2/dist/SHA256.json"
+      - name: Entregar candidatos Windows V2 (NO VALIDADOS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiR-V2-Windows-Portable-e-Instalador-PREVIEW-SIN-FIRMA
+          path: |
+            mir/native-v2/dist/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip
+            mir/native-v2/dist/MiR_V2_Instalador_PREVIEW_SIN_FIRMA.exe
+            mir/native-v2/dist/SHA256.json
+            mir/native-v2/native-patch-report.json
+          if-no-files-found: error
