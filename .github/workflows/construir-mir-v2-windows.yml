@@ -111,12 +111,18 @@ jobs:
           $flutterRoot = Split-Path (Split-Path $bin -Parent) -Parent
           Invoke-WebRequest -Uri "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip" -OutFile "engine-win.zip"
           Expand-Archive -Path "engine-win.zip" -DestinationPath "engine-expanded"
-          Copy-Item "engine-expanded/*" (Join-Path $flutterRoot "bin/cache/artifacts/engine/windows-x64-release") -Recurse -Force
+          $engineSource = "engine-expanded/windows-x64-release"
+          $engineTarget = Join-Path $flutterRoot "bin/cache/artifacts/engine/windows-x64-release"
+          if (!(Test-Path $engineSource)) { throw "El archivo de Flutter Engine no tiene la estructura esperada" }
+          Copy-Item "$engineSource/*" $engineTarget -Recurse -Force
       - name: Parche de Flutter usado por el motor original
-        shell: bash
+        shell: pwsh
         run: |
-          FLUTTER_ROOT="$(dirname "$(dirname "$(which flutter)")")"
-          git -C "$FLUTTER_ROOT" apply "$GITHUB_WORKSPACE/upstream/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+          $flutterExe = (Get-Command flutter).Source
+          $flutterRoot = Split-Path (Split-Path $flutterExe -Parent) -Parent
+          $patch = (Resolve-Path "upstream/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff").Path
+          & git -C $flutterRoot apply $patch
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo aplicar parche de Flutter del origen" }
       - name: Rust Windows del motor
         uses: dtolnay/rust-toolchain@stable
         with:
