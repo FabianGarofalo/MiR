@@ -153,6 +153,22 @@ jobs:
         working-directory: upstream
         run: |
           python build.py --portable --flutter --skip-portable-pack --hwcodec --vram
+      - name: Prueba de arranque de MiR.exe sin instalación externa
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "upstream/flutter/build/windows/x64/runner/Release/MiR.exe").Path
+          $dir = Split-Path $exe -Parent
+          $meta = (Get-Item $exe).VersionInfo
+          if ($meta.ProductName -ne "MiR") { throw "El ejecutable no declara ProductName MiR: $($meta.ProductName)" }
+          if (Test-Path "upstream/flutter/build/windows/x64/runner/Release/rustdesk.exe") { throw "Apareció el ejecutable anterior" }
+          $proc = Start-Process -FilePath $exe -ArgumentList '--version' -WorkingDirectory $dir -PassThru
+          if (-not $proc.WaitForExit(30000)) {
+            $proc.Kill()
+            throw "MiR.exe no terminó al ejecutar --version (posible problema de inicio)"
+          }
+          if ($proc.ExitCode -ne 0) { throw "MiR.exe --version devolvió $($proc.ExitCode)" }
+          if (Get-Service -Name 'MiR' -ErrorAction SilentlyContinue) { throw "La prueba de arranque no debe instalar un servicio" }
+          Write-Host "MiR.exe se inició sin RustDesk instalado en el runner y terminó correctamente."
       - name: Preparar portable con bibliotecas, marca y licencia
         shell: pwsh
         run: |
