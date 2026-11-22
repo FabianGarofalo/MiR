@@ -62,6 +62,35 @@ def apply_native(root: Path, repo: Path) -> dict:
                    "_VoiceCallMenu(", "_RecordMenu(", "_CloseMenu("):
         if action not in toolbar:
             raise RuntimeError(f"Acción nativa faltante: {action}")
+    # Acción de llamada: si no hay llamada activa, mostrar control para iniciarla
+    # usando la función real del motor (antes la UI la ocultaba).
+    toolbar = replace_once(
+        toolbar,
+        """          default:
+            return Offstage();
+        }
+      },
+    );
+  }
+
+  Widget buildCallWaiting(BuildContext context) {""",
+        """          default:
+            return _IconMenuButton(
+              assetName: 'assets/voice_call.svg',
+              tooltip: 'Voice call',
+              onPressed: () =>
+                  bind.sessionRequestVoiceCall(sessionId: ffi.sessionId),
+              color: _ToolbarTheme.blueColor,
+              hoverColor: _ToolbarTheme.hoverBlueColor,
+            );
+        }
+      },
+    );
+  }
+
+  Widget buildCallWaiting(BuildContext context) {""",
+        "Habilitar llamada de voz real"
+    )
     write_text(root, TOOLBAR, toolbar, changed)
 
     titlebar = (root / TITLEBAR).read_text(encoding="utf-8")
@@ -72,6 +101,49 @@ def apply_native(root: Path, repo: Path) -> dict:
     ):
         titlebar = replace_once(titlebar, old, new, label)
     write_text(root, TITLEBAR, titlebar, changed)
+
+    # La cabecera nativa mostrará la marca MiR directamente en Flutter.
+    home_rel = "flutter/lib/desktop/pages/desktop_home_page.dart"
+    home = (root / home_rel).read_text(encoding="utf-8")
+    home = replace_once(
+        home, "child: loadLogo(),",
+        """child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Image.asset('assets/MiR_logo.png',
+              width: 170, fit: BoxFit.contain),
+        ),""",
+        "Logo MiR dentro del cliente"
+    )
+    write_text(root, home_rel, home, changed)
+
+    settings_rel = "flutter/lib/desktop/pages/desktop_setting_page.dart"
+    settings = (root / settings_rel).read_text(encoding="utf-8")
+    settings = replace_once(
+        settings, "child: _Card(title: translate('About RustDesk'), children: [",
+        """child: _Card(title: 'Acerca de MiR', children: [
+          Image.asset('assets/MiR_logo.png', height: 46,
+            fit: BoxFit.contain),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: Text('MiR V1 | Desarrollado por EcoEtika S.A.S. | Distribución gratuita'),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text('Desarrollado sobre la base de RustDesk (AGPL-3.0).'),
+          ),
+          Image.asset('assets/EcoEtika_logo.png',
+            height: 38, fit: BoxFit.contain),""",
+        "Acerca de MiR con atribución legal"
+    )
+    write_text(root, settings_rel, settings, changed)
+
+    for name in ("MiR_logo.png", "EcoEtika_logo.png"):
+        branding_src = repo / "legacy-v1.5/payload/assets" / name
+        if not branding_src.is_file():
+            raise RuntimeError(f"Falta recurso visual: {name}")
+        branding_dst = root / "flutter/assets" / name
+        shutil.copyfile(branding_src, branding_dst)
+        changed.append(f"flutter/assets/{name}")
 
     model = (root / MODEL).read_text(encoding="utf-8")
     model = replace_once(
