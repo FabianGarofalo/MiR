@@ -1,0 +1,42 @@
+name: MiR | Validar auditoría Windows (NO modifica servicios)
+
+on:
+  push:
+    paths:
+      - 'tools/Verificar-ReceptorMiR.ps1'
+      - '.github/workflows/auditoria-receptor.yml'
+  pull_request:
+    paths:
+      - 'tools/Verificar-ReceptorMiR.ps1'
+      - '.github/workflows/auditoria-receptor.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar-auditoria:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comprobar sintaxis PowerShell
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'tools/Verificar-ReceptorMiR.ps1').Path,
+            [ref] $tokens,
+            [ref] $parseErrors
+          )
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | Out-String | Write-Host
+            throw 'Error de sintaxis en la auditoría'
+          }
+          Write-Host 'Sintaxis comprobada. No se ejecuta la auditoría sobre el runner.'
+      - name: Publicar herramienta de auditoría
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiR-Auditoria-Receptor
+          path: tools/Verificar-ReceptorMiR.ps1
+          if-no-files-found: error
