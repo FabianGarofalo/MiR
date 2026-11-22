@@ -85,9 +85,8 @@ def main():
 
     # Otras etiquetas visibles que tienen texto fijo y no usan get_app_name().
     change_once(root, "flutter/lib/desktop/widgets/tabbar_widget.dart",
-        '''                              "RustDesk",
-''', '''                              "MiR",
-''', changes)
+        '"RustDesk",',
+        '"MiR",', changes)
     change_once(root, "src/platform/windows.rs",
         'let caption = "RustDesk Output"',
         'let caption = "MiR"', changes)
