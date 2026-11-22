@@ -1,0 +1,39 @@
+name: MiR | Compilar gestor Windows V1.5 (NO es V2 nativo)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'legacy-v1.5/**'
+      - '.github/workflows/compilar-gestor-v1.5.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar que está publicado el código fuente
+        shell: pwsh
+        run: |
+          $source = 'legacy-v1.5/cmd/creator/main.go'
+          if (-not (Test-Path $source)) {
+            throw "Falta el código fuente V1.5. No se compilará una versión incompleta. Publicar primero la carpeta legacy-v1.5/cmd y legacy-v1.5/payload."
+          }
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - name: Compilar en Windows x64
+        shell: pwsh
+        run: |
+          & ./legacy-v1.5/BUILD-WINDOWS.ps1
+      - name: Guardar creador Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiR-V1.5-Creador-Windows-x64-SIN-FIRMA
+          path: |
+            legacy-v1.5/dist/MiR_Crear_Autonomos_V1.5.exe
+            legacy-v1.5/dist/SHA256.txt
+          if-no-files-found: error
