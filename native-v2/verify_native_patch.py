@@ -16,7 +16,7 @@ def verify(root: Path) -> None:
     # Eventos REALES de conexión y error; el receptor no se debe cerrar.
     assert "_miRConnectionPolicy.onConnected();" in model
     assert "_miRConnectionPolicy.onConnectionLost();" in model
-    assert "MiRConnectionPolicy(closeSession: () => closeConnection())" in model
+    assert "MiRConnectionPolicy(closeSession: () => closeConnection(id: parent.target?.id))" in model
     assert (root / "flutter/lib/mir/mir_connection_policy.dart").is_file()
     resource = (root / "flutter/windows/runner/Runner.rc").read_text(encoding="utf-8")
     assert 'VALUE "ProductName", "MiR"' in resource
