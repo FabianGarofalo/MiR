@@ -5,6 +5,9 @@ on:
     workflows:
       - 'MiR V2 | Compilar Windows nativo (CANDIDATO NO VALIDADO)'
     types: [completed]
+  push:
+    paths:
+      - '.github/workflows/probar-receptor-mir-v2.yml'
 
 permissions:
   contents: read
@@ -12,21 +15,21 @@ permissions:
 
 jobs:
   smoke-receptor:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
     runs-on: windows-2022
     steps:
       - name: Descargar paquete nativo del build exitoso
         uses: actions/download-artifact@v4
         with:
           name: MiR-V2-Windows-Portable-e-Instalador-PREVIEW-SIN-FIRMA
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ github.event_name == 'push' && '45073323311' || github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifact
       - name: Extraer portable y comprobar ejecutable propio
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          Expand-Archive "artifact/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip" -DestinationPath "portable" -Force
+          Expand-Archive "artifact/dist/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip" -DestinationPath "portable" -Force
           if (!(Test-Path "portable/MiR.exe")) { throw "No se encontró MiR.exe" }
           if (Test-Path "portable/rustdesk.exe") { throw "El cliente todavía incluye un ejecutable original" }
           if (!(Test-Path "portable/librustdesk.dll")) { throw "No contiene el motor integrado" }
