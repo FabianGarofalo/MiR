@@ -7,7 +7,7 @@
 #define MyAppName "MiR"
 #define MyVersion "2.0.0-preview"
 #define MyPublisher "EcoEtika S.A.S."
-#define AppExecutable "rustdesk.exe"
+#define AppExecutable "MiR.exe"
 
 [Setup]
 AppId={{971D5EA3-0B64-408D-9D10-566C42E51265}
@@ -45,11 +45,21 @@ Name: "{autodesktop}\MiR"; Filename: "{app}\{#AppExecutable}"; IconFilename: "{a
 
 [Tasks]
 Name: desktopicon; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Opciones adicionales:"; Flags: unchecked
+Name: unattended; Description: "Instalar receptor MiR para acceso desatendido"; GroupDescription: "Opciones adicionales:"; Flags: unchecked; Check: CanOfferMiRService
 
 [Run]
+Filename: "{app}\{#AppExecutable}"; Parameters: "--service-control create-service-with-rollback MiR ""{app}\{#AppExecutable}"""; Description: "Activar receptor MiR"; Flags: runhidden waituntilterminated; Tasks: unattended; Check: CanOfferMiRService
 Filename: "{app}\{#AppExecutable}"; Description: "Iniciar MiR"; Flags: nowait postinstall skipifsilent
 
 [Code]
+// El instalador NO altera, detiene ni reemplaza la instalación anterior.
+// Receptor propio optativo solamente si no existe ya otro servicio remoto.
+function CanOfferMiRService(): Boolean;
+begin
+  Result := not RegKeyExists(HKLM, 'SYSTEM\CurrentControlSet\Services\RustDesk')
+    and not RegKeyExists(HKLM, 'SYSTEM\CurrentControlSet\Services\MiR');
+end;
+
 // Protección: si el servicio receptor usa archivos bajo MiR, impedimos una
 // desinstalación que dejaría ese servicio apuntando a un ejecutable eliminado.
 function ReceptorDependeDeMiR(const NombreServicio: String): Boolean;
