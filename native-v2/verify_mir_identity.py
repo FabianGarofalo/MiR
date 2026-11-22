@@ -30,6 +30,12 @@ def main() -> None:
     ):
         assert token in resource, token
 
+    tabs = read("flutter/lib/desktop/widgets/tabbar_widget.dart")
+    assert '"MiR",' in tabs
+    assert '"RustDesk",' not in tabs
+    win_core = read("src/platform/windows.rs")
+    assert 'let caption = "MiR"' in win_core
+
     home = read("flutter/lib/desktop/pages/desktop_home_page.dart")
     assert "child: loadPowered(context)" not in home
     assert "assets/MiR_logo.png" in home
