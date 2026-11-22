@@ -83,6 +83,15 @@ def main():
         "MiR V1 | Desarrollado por EcoEtika S.A.S. | Distribución gratuita",
         "MiR V2 | Desarrollado por EcoEtika S.A.S. | Distribución gratuita", changes)
 
+    # Otras etiquetas visibles que tienen texto fijo y no usan get_app_name().
+    change_once(root, "flutter/lib/desktop/widgets/tabbar_widget.dart",
+        '''                              "RustDesk",
+''', '''                              "MiR",
+''', changes)
+    change_once(root, "src/platform/windows.rs",
+        'let caption = "RustDesk Output"',
+        'let caption = "MiR"', changes)
+
     # Recursos comunes del motor: iconos de aplicación, bandeja y capturas.
     ico = repo / "legacy-v1.5/payload/MiRemoto.ico"
     png = repo / "legacy-v1.5/payload/assets/MiR_icono.png"
