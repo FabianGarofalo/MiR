@@ -40,4 +40,52 @@ void main() {
     expect(count, 0);
     policy.dispose();
   });
+  test('varias pérdidas de conexión generan un único cierre', () async {
+    var cierres = 0;
+    final policy = MiRConnectionPolicy(
+      closeSession: () => cierres++,
+      gracePeriod: const Duration(milliseconds: 20),
+    );
+    policy.onConnected();
+    policy.onConnectionLost();
+    policy.onConnectionLost();
+    await Future<void>.delayed(const Duration(milliseconds: 55));
+    expect(cierres, 1);
+    policy.dispose();
+  });
+
+  test('dos sesiones tienen temporizadores independientes', () async {
+    var cierresPrimera = 0;
+    var cierresSegunda = 0;
+    final primera = MiRConnectionPolicy(
+      closeSession: () => cierresPrimera++,
+      gracePeriod: const Duration(milliseconds: 20),
+    );
+    final segunda = MiRConnectionPolicy(
+      closeSession: () => cierresSegunda++,
+      gracePeriod: const Duration(milliseconds: 20),
+    );
+    primera.onConnected();
+    segunda.onConnected();
+    primera.onConnectionLost();
+    await Future<void>.delayed(const Duration(milliseconds: 55));
+    expect(cierresPrimera, 1);
+    expect(cierresSegunda, 0);
+    primera.dispose();
+    segunda.dispose();
+  });
+
+  test('el cierre de la sesión cancela el temporizador pendiente', () async {
+    var cierres = 0;
+    final policy = MiRConnectionPolicy(
+      closeSession: () => cierres++,
+      gracePeriod: const Duration(milliseconds: 20),
+    );
+    policy.onConnected();
+    policy.onConnectionLost();
+    policy.dispose();
+    await Future<void>.delayed(const Duration(milliseconds: 55));
+    expect(cierres, 0);
+  });
+
 }
