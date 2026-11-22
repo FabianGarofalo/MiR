@@ -1,0 +1,34 @@
+name: MiR | Validar componentes Flutter (NO es cliente nativo)
+on:
+  push:
+    paths:
+      - 'native_pending/**'
+      - '.github/workflows/validar-componentes.yml'
+  pull_request:
+    paths:
+      - 'native_pending/**'
+      - '.github/workflows/validar-componentes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar-componentes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+      - name: Dependencias
+        working-directory: native_pending
+        run: flutter pub get
+      - name: Pruebas unitarias
+        working-directory: native_pending
+        run: flutter test
+      - name: Verificar analisis estatico
+        working-directory: native_pending
+        run: flutter analyze --no-fatal-infos
