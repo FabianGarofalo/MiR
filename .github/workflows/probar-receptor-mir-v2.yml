@@ -1,0 +1,59 @@
+name: MiR V2 | Probar receptor Windows autónomo en runner limpio
+
+on:
+  workflow_run:
+    workflows:
+      - 'MiR V2 | Compilar Windows nativo (CANDIDATO NO VALIDADO)'
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  smoke-receptor:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: windows-2022
+    steps:
+      - name: Descargar paquete nativo del build exitoso
+        uses: actions/download-artifact@v4
+        with:
+          name: MiR-V2-Windows-Portable-e-Instalador-PREVIEW-SIN-FIRMA
+          run-id: \${{ github.event.workflow_run.id }}
+          github-token: \${{ secrets.GITHUB_TOKEN }}
+          path: artifact
+      - name: Extraer portable y comprobar ejecutable propio
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Expand-Archive "artifact/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip" -DestinationPath "portable" -Force
+          if (!(Test-Path "portable/MiR.exe")) { throw "No se encontró MiR.exe" }
+          if (Test-Path "portable/rustdesk.exe") { throw "El cliente todavía incluye un ejecutable original" }
+          if (!(Test-Path "portable/librustdesk.dll")) { throw "No contiene el motor integrado" }
+          if (Get-Service RustDesk -ErrorAction SilentlyContinue) { throw "El runner no está limpio: tiene servicio remoto previo" }
+          Write-Host "MiR.exe y DLL interna presentes, sin RustDesk instalado"
+      - name: Probar registro de servicio MiR (sin conexión remota)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = (Resolve-Path "portable/MiR.exe").Path
+          if (Get-Service MiR -ErrorAction SilentlyContinue) { throw "El runner ya tenía un servicio MiR registrado" }
+          try {
+            $args = "--service-control create-service-with-rollback MiR " + '"' + $exe + '"'
+            $process = Start-Process -FilePath $exe -ArgumentList $args -WorkingDirectory (Split-Path $exe -Parent) -Wait -PassThru
+            if ($process.ExitCode -ne 0) { throw "MiR no pudo registrar su servicio: $($process.ExitCode)" }
+            $info = Get-CimInstance Win32_Service -Filter "Name='MiR'"
+            if (-not $info) { throw "No existe el servicio MiR en Windows" }
+            if ($info.PathName -notmatch 'MiR[.]exe') { throw "Ruta inesperada del receptor MiR" }
+            Write-Host "Servicio MiR creado"
+            Write-Host "Path: $($info.PathName)"
+            Write-Host "StartMode: $($info.StartMode)"
+            Write-Host "Estado durante prueba: $($info.State)"
+            Write-Host "Esta prueba NO certifica recepción antes del PIN ni acceso desde Android"
+          } finally {
+            $service = Get-Service MiR -ErrorAction SilentlyContinue
+            if ($service) {
+              $p = Start-Process -FilePath $exe -ArgumentList '--service-control remove MiR' -Wait -PassThru
+              if ($p.ExitCode -ne 0) { Write-Warning "No se pudo retirar el servicio de prueba: $($p.ExitCode)" }
+            }
+          }
