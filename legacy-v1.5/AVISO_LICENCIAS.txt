@@ -1,0 +1,13 @@
+MiR V1.5 | Aviso legal
+
+MiR es una aplicación de gestión y acceso remoto desarrollada por EcoEtika S.A.S.
+Para las conexiones remotas utiliza tecnología derivada del proyecto libre RustDesk:
+https://github.com/rustdesk/rustdesk
+
+Licencia del motor: GNU Affero General Public License, versión 3 (AGPL-3.0).
+La distribución de binarios completos o modificados obliga a respetar los avisos,
+el acceso al código fuente correspondiente y las licencias de terceros aplicables.
+No atribuir a EcoEtika los derechos sobre el motor ni sus dependencias.
+
+El creador V1.5 incorpora archivos del motor suministrados localmente por el
+usuario. No se incluyen esos binarios en este repositorio público.
