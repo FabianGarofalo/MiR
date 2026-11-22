@@ -1,9 +1,11 @@
-name: MiR | Validar base nativa V2 (NO compila cliente)
+name: MiR | Aplicar y verificar integración nativa V2 (NO compila binario)
 
 on:
   push:
     paths:
       - 'native-v2/**'
+      - 'native_pending/**'
+      - 'legacy-v1.5/payload/MiRemoto.ico'
       - '.github/workflows/validar-base-nativa.yml'
   workflow_dispatch:
 
@@ -11,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  validar-upstream:
-    runs-on: ubuntu-latest
+  integrar-nativo:
+    runs-on: ubuntu-22.04
     steps:
       - name: Código MiR
         uses: actions/checkout@v4
@@ -24,12 +26,26 @@ jobs:
           path: upstream
           submodules: false
           persist-credentials: false
-      - name: Comprobar origen y preparar componentes
+      - name: Verificar origen y copiar componentes
+        run: python3 native-v2/stage_components.py --upstream upstream
+      - name: Aplicar identidad MiR y política de desconexión en cliente real
+        run: python3 native-v2/apply_mir_native.py --upstream upstream --repo .
+      - name: Verificar conexiones reales de la barra y cambios de marca
         run: |
-          python3 native-v2/stage_components.py --upstream upstream
-      - name: Publicar informe de estructura
+          python3 native-v2/verify_native_patch.py --upstream upstream
+          git -C upstream diff --check
+          python3 -m py_compile native-v2/apply_mir_native.py native-v2/verify_native_patch.py
+      - name: Preparar diferencias para revisión
+        run: |
+          git -C upstream diff -- flutter/lib/desktop/widgets/remote_toolbar.dart flutter/lib/models/model.dart flutter/lib/desktop/widgets/titlebar_widget.dart flutter/windows/runner/Runner.rc flutter/pubspec.yaml > native-v2/mir-native.patch
+          sha256sum native-v2/mir-native.patch > native-v2/mir-native.patch.sha256
+      - name: Publicar informe y cambios (no son ejecutables)
         uses: actions/upload-artifact@v4
         with:
-          name: MiR-V2-Validacion-Estructura-NO-BINARIO
-          path: native-v2/integration-report.json
+          name: MiR-V2-Parche-Nativo-Y-Validacion-NO-BINARIO
+          path: |
+            native-v2/integration-report.json
+            native-v2/native-patch-report.json
+            native-v2/mir-native.patch
+            native-v2/mir-native.patch.sha256
           if-no-files-found: error
