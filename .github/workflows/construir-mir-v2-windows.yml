@@ -1,4 +1,5 @@
 name: MiR V2 | Compilar Windows nativo (CANDIDATO NO VALIDADO)
+# Revisión de integración: barra y política de cierre por sesión, branding y bloqueo de desinstalación.
 
 on:
   push:
