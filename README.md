@@ -1,35 +1,41 @@
-# MiR — Acceso remoto | Windows + Android
+# MiR — Acceso remoto Windows + Android
 
-**MiR V1 | Desarrollado por EcoEtika S.A.S. | Distribución gratuita**
+**MiR V2 | Desarrollado por EcoEtika S.A.S. | Distribución gratuita**
 
-MiR es un proyecto de aplicación de acceso remoto personal con identidad visual propia. El objetivo es controlar y recibir conexiones desde una sola instalación Windows y, más adelante, desde Android.
+MiR es un cliente y receptor de escritorio remoto de marca propia. Su base tecnológica es el motor Flutter/Rust de código abierto RustDesk, pero **el ejecutable de MiR es `MiR.exe`** y la implementación nativa emplea un **servicio Windows `MiR`**, independiente del servicio denominado `RustDesk`.
 
-## Qué está disponible realmente
+## Estado verificable
 
-| Componente | Estado |
+| Elemento | Estado |
 | --- | --- |
-| Gestor Windows V1.5 (Go + PowerShell) | Código fuente publicado en [legacy-v1.5](legacy-v1.5/) y compilación de GitHub Actions verificada |
-| Creador autónomo V1.5 | Se genera en [Actions](../../actions/workflows/compilar-gestor-v1.5.yml) bajo ejecución manual; necesita el motor local para crear portable e instalador |
-| Barra flotante y cierre por desconexión | Componentes Flutter experimentales en [native_pending](native_pending/); todavía **no están conectados al cliente remoto** |
-| MiR V2 Windows nativo | Pendiente de integración y compilación del motor Flutter/Rust |
-| Receptor independiente | Todavía no verificado sin instalación previa; **no desinstalar** el cliente anterior |
-| MiR Android APK | Pendiente |
-| Firma digital | Pendiente; no se distribuyen binarios como firmados |
+| Gestor transitorio V1.5 (Go/PowerShell) | Código publicado en [legacy-v1.5](legacy-v1.5/), compilación Windows comprobada |
+| Base Flutter/Rust 1.5.3 | Revisión fijada `95cca3f661f635b3cc85c04935fe8d96d8f432ef` |
+| Nombre MiR.exe y servicio MiR | Incorporados a [finish_mir_identity.py](native-v2/finish_mir_identity.py); validación estructural correcta |
+| Barra con acciones reales | Se adapta `RemoteToolbar` original (teclado, monitores, llamadas, grabación, cerrar), no se superpone una barra ficticia |
+| Cierre tras desconexión | Política integrada en eventos nativos de sesión, con plazo de 15 s después de haber conectado |
+| Logotipos, ventana, pestañas y notificaciones | Aplicados mediante parches reproducibles, manteniendo la atribución legal |
+| Cliente y receptor Windows V2 | [Construcción nativa](../../actions/workflows/construir-mir-v2-windows.yml); el resultado solo se declara compilado tras terminar en verde |
+| Instalador V2 | Preparado con una opción **voluntaria** de servicio receptor MiR cuando no existe un servicio RustDesk instalado |
+| Prueba física antes del PIN y tras reinicio | **Pendiente: requiere notebooks reales** |
+| APK Android propio | Pendiente |
+| Firma digital de EcoEtika S.A.S. | Pendiente de certificado válido |
 
-## Código y compilación
+## Compilación
 
-- `legacy-v1.5/`: código de gestor, empaquetador y receptor de transición. No se sube el ejecutable ni las bibliotecas del motor original ni los datos de equipos.
-- `.github/workflows/compilar-gestor-v1.5.yml`: compila el creador de Windows x64. **No compila MiR V2 nativo.**
-- `native_pending/`: widgets, política de desconexión y pruebas Flutter.
-- `docs/INTEGRACION_NATIVA.md`: alcance y criterios de aceptación de V2.
-- `tools/Verificar-ReceptorMiR.ps1`: auditoría local de solo lectura; no habilita por sí sola la desinstalación del cliente anterior.
+La única aplicación Windows visible prevista es **MiR.exe**, con DLLs técnicas del motor incluidas en la misma carpeta; **no es necesario instalar RustDesk por separado para iniciar el cliente**.
 
-## Seguridad
+- [Compilación nativa Windows](../../actions/workflows/construir-mir-v2-windows.yml): desde el código original, aplica los parches MiR y genera un ZIP portable y un instalador sin firmar como **candidatos de prueba**.
+- [Validación del parche](../../actions/workflows/validar-base-nativa.yml): verifica la identidad MiR, los cambios de sesión y la atribución sin producir ejecutables.
+- [Gestor V1.5](legacy-v1.5/): fuente histórica separada del producto V2.
 
-No subir IDs remotos personales, contraseñas, certificados, tokens, configuraciones locales, diagnósticos, claves privadas ni registros de sesión. El repositorio está público.
+## Instalación y recepción desatendida
 
-No desinstalar una instalación de acceso remoto que ya funciona hasta validar en dos equipos que MiR inicia su propio receptor después de reiniciar, acepta conexiones antes del PIN de Windows y permite control desde Android.
+**No desinstalar ni reemplazar el receptor actual basándose únicamente en un build exitoso.** El instalador V2 no desactiva un servicio RustDesk anterior. Solo ofrece crear su propio servicio si no se detecta uno de esos servicios, para evitar pérdida de acceso. Antes de retirar el receptor antiguo hay que verificar localmente, entre dos computadoras y desde Android, pantalla bloqueada, antes del PIN, reinicio, portapapeles, monitores y archivos.
 
-## Licencias
+El código de comprobación local está en [tools](tools/). No almacena contraseñas ni IDs personales.
 
-La base tecnológica utiliza componentes del proyecto de código abierto [RustDesk](https://github.com/rustdesk/rustdesk). Deben conservarse los avisos legales, créditos y obligaciones de la licencia AGPL-3.0 y licencias de dependencias, aunque la interfaz pública muestre la marca MiR.
+## Licencia y seguridad
+
+La interfaz pública usa MiR, pero se mantienen los créditos, la licencia AGPL-3.0 y los derechos de terceros en Acerca de y documentación legal de distribución. La DLL `librustdesk.dll` es una biblioteca **interna** del motor y no es otro programa que el usuario deba ejecutar.
+
+El repositorio es **público**: no subir contraseñas, claves, tokens, identificadores privados de acceso, certificados de firma ni diagnósticos con datos de equipos.
