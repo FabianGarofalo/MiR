@@ -22,6 +22,17 @@ def verify(root: Path) -> None:
     assert 'VALUE "ProductName", "MiR"' in resource
     assert 'VALUE "CompanyName", "EcoEtika S.A.S."' in resource
     assert 'VALUE "LegalCopyright", "Copyright' in resource
+    about = (root / "flutter/lib/desktop/pages/desktop_setting_page.dart").read_text(encoding="utf-8")
+    home = (root / "flutter/lib/desktop/pages/desktop_home_page.dart").read_text(encoding="utf-8")
+    assert "'Acerca de MiR'" in about
+    assert "Desarrollado sobre la base de RustDesk (AGPL-3.0)." in about
+    assert "assets/MiR_logo.png" in about and "assets/EcoEtika_logo.png" in about
+    assert "assets/MiR_logo.png" in home
+    for img in ("MiR_logo.png", "EcoEtika_logo.png"):
+        asset = root / "flutter/assets" / img
+        assert asset.is_file() and asset.stat().st_size > 1000
+    assert "Habilitar llamada" not in toolbar  # el control es nativo, no una simulación
+    assert "bind.sessionRequestVoiceCall(sessionId: ffi.sessionId)" in toolbar
     icon = root / "flutter/windows/runner/resources/app_icon.ico"
     assert icon.is_file() and icon.stat().st_size > 1000
     print("MiR: adaptación de interfaz, eventos y atribución verificada (sin compilar).")
