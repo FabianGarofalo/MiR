@@ -1,0 +1,40 @@
+# Ejecutables generados y artefactos de compilación
+*.exe
+*.dll
+*.msi
+*.msix
+*.apk
+*.aab
+*.pdb
+*.dmp
+*.obj
+*.o
+*.pyc
+build/
+dist/
+.cache/
+.dart_tool/
+.flutter-plugins*
+**/ephemeral/
+**/Generated.xcconfig
+# Datos locales, registros y diagnósticos que pueden identificar equipos
+*.log
+diagnostico_*.txt
+equipos.json
+devices.json
+config.json
+*.bak
+*.key
+*.pem
+*.p12
+*.pfx
+*.keystore
+*.jks
+.env
+.env.*
+!*.env.example
+# Dependencias descargadas localmente
+vendor/
+vcpkg/
+target/
+node_modules/
