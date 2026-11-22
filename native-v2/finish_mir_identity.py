@@ -67,6 +67,22 @@ def main():
         'VALUE "OriginalFilename", "rustdesk.exe"',
         'VALUE "OriginalFilename", "MiR.exe"', changes)
 
+    # En las versiones de marca blanca el origen muestra "Powered by RustDesk"
+    # en la portada. La atribución permanece en Acerca de y en LICENCE.
+    change_once(root, "flutter/lib/desktop/pages/desktop_home_page.dart",
+        """      if (bind.isCustomClient())
+        Align(
+          alignment: Alignment.center,
+          child: loadPowered(context),
+        ),
+""", "", changes)
+
+    # En el panel de Acerca de sí debe mantenerse el crédito del motor.
+    # Ajustar solamente el número visible de versión de este paquete.
+    change_once(root, "flutter/lib/desktop/pages/desktop_setting_page.dart",
+        "MiR V1 | Desarrollado por EcoEtika S.A.S. | Distribución gratuita",
+        "MiR V2 | Desarrollado por EcoEtika S.A.S. | Distribución gratuita", changes)
+
     # Recursos comunes del motor: iconos de aplicación, bandeja y capturas.
     ico = repo / "legacy-v1.5/payload/MiRemoto.ico"
     png = repo / "legacy-v1.5/payload/assets/MiR_icono.png"
