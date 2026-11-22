@@ -2,10 +2,6 @@ name: MiR | Compilar gestor Windows V1.5 (NO es V2 nativo)
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'legacy-v1.5/**'
-      - '.github/workflows/compilar-gestor-v1.5.yml'
 
 permissions:
   contents: read
