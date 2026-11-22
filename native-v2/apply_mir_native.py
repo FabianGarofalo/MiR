@@ -157,7 +157,7 @@ def apply_native(root: Path, repo: Path) -> dict:
   // MiR: cierra una sesión establecida luego de desconexión prolongada.
   // El receptor local no se detiene, no se borran credenciales.
   late final MiRConnectionPolicy _miRConnectionPolicy =
-      MiRConnectionPolicy(closeSession: () => closeConnection());""",
+      MiRConnectionPolicy(closeSession: () => closeConnection(id: parent.target?.id));""",
         "Modelo sesión"
     )
     model = replace_once(
