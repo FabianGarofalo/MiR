@@ -19,8 +19,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: MiR-V2-Windows-Portable-e-Instalador-PREVIEW-SIN-FIRMA
-          run-id: \${{ github.event.workflow_run.id }}
-          github-token: \${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           path: artifact
       - name: Extraer portable y comprobar ejecutable propio
         shell: pwsh
