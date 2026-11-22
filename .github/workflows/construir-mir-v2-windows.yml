@@ -94,7 +94,9 @@ jobs:
         run: |
           python mir/native-v2/stage_components.py --upstream upstream --components mir/native_pending/lib --report mir/native-v2/integration-report.json
           python mir/native-v2/apply_mir_native.py --upstream upstream --repo mir --report mir/native-v2/native-patch-report.json
+          python mir/native-v2/finish_mir_identity.py --upstream upstream --repo mir --report mir/native-v2/identity-report.json
           python mir/native-v2/verify_native_patch.py --upstream upstream
+          python mir/native-v2/verify_mir_identity.py --upstream upstream
       - name: Instalar LLVM
         uses: KyleMayes/install-llvm-action@v2
         with:
@@ -112,10 +114,13 @@ jobs:
           $flutterRoot = Split-Path (Split-Path $bin -Parent) -Parent
           Invoke-WebRequest -Uri "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip" -OutFile "engine-win.zip"
           Expand-Archive -Path "engine-win.zip" -DestinationPath "engine-expanded"
-          $engineSource = "engine-expanded/windows-x64-release"
           $engineTarget = Join-Path $flutterRoot "bin/cache/artifacts/engine/windows-x64-release"
-          if (!(Test-Path $engineSource)) { throw "El archivo de Flutter Engine no tiene la estructura esperada" }
+          $engineSource = if (Test-Path "engine-expanded/windows-x64-release") { "engine-expanded/windows-x64-release" } else { "engine-expanded" }
+          if (!(Test-Path $engineTarget)) { throw "Falta la carpeta de Flutter Engine para Windows" }
           Copy-Item "$engineSource/*" $engineTarget -Recurse -Force
+          if (!(Test-Path (Join-Path $engineTarget "flutter_windows.dll"))) {
+            throw "Falta flutter_windows.dll en el motor compilado"
+          }
       - name: Parche de Flutter usado por el motor original
         shell: pwsh
         run: |
@@ -152,7 +157,9 @@ jobs:
         shell: pwsh
         run: |
           $src = "upstream/flutter/build/windows/x64/runner/Release"
-          if (!(Test-Path "$src/rustdesk.exe")) { throw "No se encontró el ejecutable nativo de origen; se rechaza un paquete vacío" }
+          if (!(Test-Path "$src/MiR.exe")) { throw "No se encontró MiR.exe; se rechaza un paquete con la identidad anterior" }
+          if (Test-Path "$src/rustdesk.exe") { throw "El paquete contiene un ejecutable externo; se rechaza" }
+          if (!(Test-Path "$src/librustdesk.dll")) { throw "Falta la biblioteca interna del motor remoto" }
           New-Item -ItemType Directory "mir/native-v2/dist/portable" -Force | Out-Null
           Copy-Item "$src/*" "mir/native-v2/dist/portable/" -Recurse -Force
           Copy-Item "upstream/LICENCE" "mir/native-v2/dist/portable/LICENCE" -Force
@@ -160,11 +167,20 @@ jobs:
           @'
           MiR V2 — CANDIDATO NATIVO SIN VALIDACIÓN
           Desarrollado por EcoEtika S.A.S. | Distribución gratuita
-          Desarrollado sobre la base de RustDesk. Ver LICENCE y avisos del origen.
+          Aplicación principal: MiR.exe. Motor remoto integrado (AGPL-3.0). Ver LICENCE.
           NO se verificó recepción antes del PIN, desinstalación del cliente anterior, Android ni firma digital.
           No desinstales tu software remoto actual hasta realizar pruebas locales.
           '@ | Set-Content -Path "mir/native-v2/dist/portable/LEER_ANTES_DE_USAR.txt" -Encoding utf8
           Compress-Archive -Path "mir/native-v2/dist/portable/*" -DestinationPath "mir/native-v2/dist/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip" -Force
+          $zip = "mir/native-v2/dist/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip).Path)
+          try {
+            $entries = @($archive.Entries | ForEach-Object { $_.FullName })
+            if ($entries -notcontains 'MiR.exe' -or $entries -contains 'rustdesk.exe') {
+              throw "El ZIP no contiene MiR.exe o conserva el ejecutable original"
+            }
+          } finally { $archive.Dispose() }
       - name: Instalar Inno Setup si falta
         shell: pwsh
         run: |
@@ -196,4 +212,5 @@ jobs:
             mir/native-v2/dist/MiR_V2_Instalador_PREVIEW_SIN_FIRMA.exe
             mir/native-v2/dist/SHA256.json
             mir/native-v2/native-patch-report.json
+            mir/native-v2/identity-report.json
           if-no-files-found: error
