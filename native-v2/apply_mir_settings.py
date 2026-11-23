@@ -90,10 +90,10 @@ def apply(upstream: Path, repo: Path) -> list[str]:
                   color: Color(0xFF0B191A),
                   border: Border(bottom: BorderSide(color: Color(0xFF315052))),
                 ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _settingTabs().map((tab) => Padding(
+                child: Wrap(
+                  spacing: 0,
+                  runSpacing: 4,
+                  children: _settingTabs().map((tab) => Padding(
                       padding: const EdgeInsets.only(right: 7),
                       child: Obx(() {
                         final selected = selectedTab.value == tab.key;
@@ -127,7 +127,6 @@ def apply(upstream: Path, repo: Path) -> list[str]:
                         );
                       }),
                     )).toList(),
-                  ),
                 ),
               ),
               Expanded(
@@ -207,6 +206,8 @@ def apply(upstream: Path, repo: Path) -> list[str]:
          "background: Color(0xFF0B191A)"),
         ("primary: Colors.blue",
          "primary: accent"),
+        ("backgroundColor: MyTheme.accent,\n        foregroundColor: Colors.white",
+         "backgroundColor: MyTheme.accent,\n        foregroundColor: Color(0xFF0B191A)"),
         ("backgroundColor: MaterialStatePropertyAll(Color(0xFF121212))",
          "backgroundColor: MaterialStatePropertyAll(Color(0xFF132629))"),
     ):
