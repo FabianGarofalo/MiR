@@ -34,6 +34,10 @@ jobs:
         run: python3 native-v2/finish_mir_identity.py --upstream upstream --repo .
       - name: Integrar portada MiR en Flutter
         run: python3 native-v2/apply_mir_home.py --upstream upstream --repo .
+      - name: Integrar Ajustes completos, navegación y Acerca de MiR
+        run: python3 native-v2/apply_mir_settings.py --upstream upstream --repo .
+      - name: Verificar identidad y navegación interna MiR
+        run: python3 native-v2/verify_mir_settings.py --upstream upstream
       - name: Verificar portada propia de MiR
         run: python3 native-v2/verify_mir_home.py --upstream upstream
       - name: Verificar barra, nombre del ejecutable, servicio y logos
@@ -41,7 +45,7 @@ jobs:
           python3 native-v2/verify_native_patch.py --upstream upstream
           python3 native-v2/verify_mir_identity.py --upstream upstream
           git -C upstream diff --check
-          python3 -m py_compile native-v2/apply_mir_home.py native-v2/verify_mir_home.py native-v2/apply_mir_native.py native-v2/finish_mir_identity.py native-v2/verify_native_patch.py native-v2/verify_mir_identity.py
+          python3 -m py_compile native-v2/apply_mir_settings.py native-v2/verify_mir_settings.py native-v2/apply_mir_home.py native-v2/verify_mir_home.py native-v2/apply_mir_native.py native-v2/finish_mir_identity.py native-v2/verify_native_patch.py native-v2/verify_mir_identity.py
       - name: Preparar diferencias para revisión
         run: |
           git -C upstream diff -- flutter/lib/desktop/widgets/remote_toolbar.dart flutter/lib/models/model.dart flutter/lib/desktop/widgets/titlebar_widget.dart flutter/windows/runner/Runner.rc flutter/pubspec.yaml src/core_main.rs flutter/windows/CMakeLists.txt flutter/windows/runner/main.cpp flutter/lib/desktop/pages/desktop_home_page.dart > native-v2/mir-native.patch
@@ -55,6 +59,7 @@ jobs:
             native-v2/native-patch-report.json
             native-v2/identity-report.json
             native-v2/mir-home-report.json
+            native-v2/mir-settings-report.json
             native-v2/mir-native.patch
             native-v2/mir-native.patch.sha256
           if-no-files-found: error
