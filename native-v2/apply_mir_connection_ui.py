@@ -247,10 +247,15 @@ Widget _miRActionIcon(String tooltip, Widget? existing, String? asset) {
                       color: hover ? widget.hoverColor : widget.color,
                     ),
                     child: icon)"""
-    if toolbar.count(icon_deco) != 2:
+    # El segundo botón tiene cuatro espacios más de indentación.
+    submenu_deco = "\\n".join("    " + line for line in icon_deco.split("\\n"))
+    submenu_new = "\\n".join("    " + line for line in icon_new.split("\\n"))
+    if toolbar.count(icon_deco) != 1 or toolbar.count(submenu_deco) != 1:
         raise RuntimeError(
-            f"Se esperan dos botones icono; se hallaron {toolbar.count(icon_deco)}")
-    toolbar = toolbar.replace(icon_deco, icon_new)
+            "Anclas de icono y submenú cambiadas: " +
+            f"{toolbar.count(icon_deco)}/{toolbar.count(submenu_deco)}")
+    toolbar = toolbar.replace(icon_deco, icon_new, 1)
+    toolbar = toolbar.replace(submenu_deco, submenu_new, 1)
 
     if toolbar.count("message: translate(widget.tooltip),") < 2:
         raise RuntimeError("No se localizaron las ayudas de la barra")
