@@ -59,6 +59,15 @@ def apply(upstream: Path, repo: Path) -> list[str]:
     settings = once(settings, "children.add(const _About());",
         "children.add(const MiRAboutPage());", "Acerca de real en MiR")
 
+    # Eliminar el bloque heredado de Acerca de por completo.
+    # Es la única vista que contenía enlaces promocionales y un eslogan ajeno;
+    # los derechos de los autores originales permanecen en MiRAboutPage.
+    legacy_start = settings.index("class _About extends StatefulWidget {")
+    legacy_end = settings.index("//#endregion", legacy_start)
+    settings = settings[:legacy_start] + (
+        "// Acerca de: componente MiRAboutPage, con créditos de terceros preservados.\\n\\n"
+    ) + settings[legacy_end:]
+
     a = settings.index("class _DesktopSettingPageState")
     start = settings.index("  @override\n  Widget build(BuildContext context) {\n    super.build(context);\n    return Scaffold(", a)
     end = settings.index("  Widget _header(BuildContext context) {", start)
