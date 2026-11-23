@@ -372,23 +372,38 @@ class ConnectionManagerState extends State<ConnectionManager>
 Widget buildConnectionCard(Client client) {
   return Consumer<ServerModel>(
     builder: (context, value, child) => Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
       key: ValueKey(client.id),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _CmHeader(client: client),
-        client.type_() == ClientType.file ||
-                client.type_() == ClientType.portForward ||
-                client.type_() == ClientType.terminal ||
-                client.disconnected
-            ? Offstage()
-            : _PrivilegeBoard(client: client),
+        // El contenido variable (permisos, chat y llamadas) siempre puede
+        // desplazarse. Nunca debe tapar ni recortar las acciones críticas.
         Expanded(
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: _CmControlPanel(client: client),
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _CmHeader(client: client),
+                if (client.type_() != ClientType.file &&
+                    client.type_() != ClientType.portForward &&
+                    client.type_() != ClientType.terminal &&
+                    !client.disconnected)
+                  _PrivilegeBoard(client: client),
+                _CmControlPanel(client: client, primaryOnly: false),
+              ],
+            ),
           ),
-        )
+        ),
+        // Aceptar/Cancelar o Elevar/Desconectar permanecen visibles al pie.
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.only(top: 4),
+          decoration: const BoxDecoration(
+            color: _miRBg,
+            border: Border(top: BorderSide(color: _miREdge, width: 0.7)),
+          ),
+          child: _CmControlPanel(client: client, primaryOnly: true),
+        ),
       ],
     ).paddingSymmetric(vertical: 4.0, horizontal: 8.0),
   );
@@ -871,16 +886,26 @@ const double buttonBottomMargin = 8;
 
 class _CmControlPanel extends StatelessWidget {
   final Client client;
+  final bool primaryOnly;
 
-  const _CmControlPanel({Key? key, required this.client}) : super(key: key);
+  const _CmControlPanel({
+    Key? key,
+    required this.client,
+    required this.primaryOnly,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return client.authorized
-        ? client.disconnected
-            ? buildDisconnected(context)
-            : buildAuthorized(context)
-        : buildUnAuthorized(context);
+    if (primaryOnly) {
+      return client.authorized
+          ? (client.disconnected
+              ? buildDisconnected(context)
+              : buildAuthorizedFooter(context))
+          : buildUnAuthorized(context);
+    }
+    return client.authorized && !client.disconnected
+        ? buildAuthorized(context)
+        : const SizedBox.shrink();
   }
 
   Widget _miRCallCard({
@@ -934,13 +959,8 @@ class _CmControlPanel extends StatelessWidget {
   }
 
   buildAuthorized(BuildContext context) {
-    final bool canElevate = bind.cmCanElevate();
-    final model = Provider.of<ServerModel>(context);
-    final showElevation = canElevate &&
-        model.showElevation &&
-        client.type_() == ClientType.remote;
     return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Offstage(
           offstage: !client.inVoiceCall,
@@ -1078,6 +1098,19 @@ class _CmControlPanel extends StatelessWidget {
               text: "Switch Sides",
               textColor: Colors.white),
         ),
+      ],
+    ).marginOnly(bottom: 4);
+  }
+
+  Widget buildAuthorizedFooter(BuildContext context) {
+    final bool canElevate = bind.cmCanElevate();
+    final model = Provider.of<ServerModel>(context);
+    final showElevation = canElevate &&
+        model.showElevation &&
+        client.type_() == ClientType.remote;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
         Offstage(
           offstage: !showElevation,
           child: buildButton(
@@ -1113,7 +1146,7 @@ class _CmControlPanel extends StatelessWidget {
           ],
         )
       ],
-    ).marginOnly(bottom: buttonBottomMargin);
+    ).marginOnly(bottom: 4);
   }
 
   buildDisconnected(BuildContext context) {
@@ -1140,9 +1173,28 @@ class _CmControlPanel extends StatelessWidget {
                 key: kOptionHideElevateButtonInAcceptWindow) !=
             'Y';
     final showAccept = model.approveMode != 'password';
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
+    return Container(
+      margin: const EdgeInsets.fromLTRB(4, 3, 4, 7),
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 7),
+      decoration: BoxDecoration(
+        color: _miRCard,
+        border: Border.all(color: _miRAccent, width: 0.9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        const Row(children: [
+          Icon(Icons.verified_user_outlined, color: _miRAccent, size: 16),
+          SizedBox(width: 7),
+          Text('Solicitud de acceso', style: TextStyle(
+            color: _miRText, fontWeight: FontWeight.w700, fontSize: 12.5)),
+        ]),
+        const SizedBox(height: 3),
+        const Align(alignment: Alignment.centerLeft, child: Text(
+          'Revisá la solicitud antes de permitir el control remoto.',
+          style: TextStyle(color: _miRMuted, fontSize: 10.5))),
+        const SizedBox(height: 6),
         Offstage(
           offstage: !showElevation || !showAccept,
           child: buildButton(context, color: Colors.green[700], onClick: () {
@@ -1183,7 +1235,7 @@ class _CmControlPanel extends StatelessWidget {
               child: buildButton(
                 context,
                 color: Colors.transparent,
-                border: Border.all(color: Colors.grey),
+                border: Border.all(color: _miREdge),
                 onClick: handleDisconnect,
                 text: 'Cancel',
                 textColor: null,
@@ -1192,7 +1244,8 @@ class _CmControlPanel extends StatelessWidget {
           ],
         ),
       ],
-    ).marginOnly(bottom: buttonBottomMargin);
+    ),
+    );
   }
 
   Widget buildButton(BuildContext context,
