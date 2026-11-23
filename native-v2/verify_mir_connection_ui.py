@@ -17,8 +17,8 @@ def main() -> None:
     tabs = (root / "flutter/lib/desktop/widgets/tabbar_widget.dart").read_text(encoding="utf-8")
 
     for text in (
-        "_miRActionIcon(widget.tooltip, widget.icon, widget.assetName)",
-        "_miRActionIcon(widget.tooltip, widget.icon, widget.svg)",
+        "widget.tooltip, widget.icon, widget.assetName)",
+        "widget.tooltip, widget.icon, widget.svg)",
         "_miRTooltip(widget.tooltip)",
         "Fijar barra de conexión",
         "Seleccionar pantalla",
