@@ -248,8 +248,8 @@ Widget _miRActionIcon(String tooltip, Widget? existing, String? asset) {
                     ),
                     child: icon)"""
     # El segundo botón tiene cuatro espacios más de indentación.
-    submenu_deco = "\\n".join("    " + line for line in icon_deco.split("\\n"))
-    submenu_new = "\\n".join("    " + line for line in icon_new.split("\\n"))
+    submenu_deco = chr(10).join("    " + line for line in icon_deco.splitlines())
+    submenu_new = chr(10).join("    " + line for line in icon_new.splitlines())
     if toolbar.count(icon_deco) != 1 or toolbar.count(submenu_deco) != 1:
         raise RuntimeError(
             "Anclas de icono y submenú cambiadas: " +
