@@ -494,8 +494,21 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(children: [
-              Image.asset('assets/MiR_logo.png', width: 126, height: 54,
-                fit: BoxFit.contain),
+              Tooltip(
+                message: 'Ir al inicio de MiR',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () {
+                    if (_inSettings) {
+                      _backToMiR();
+                    } else if (_section != 0) {
+                      setState(() => _section = 0);
+                    }
+                  },
+                  child: Image.asset('assets/MiR_logo.png',
+                    width: 126, height: 54, fit: BoxFit.contain),
+                ),
+              ),
               const SizedBox(width: 18),
               const Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

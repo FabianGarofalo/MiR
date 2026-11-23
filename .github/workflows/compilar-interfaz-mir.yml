@@ -5,6 +5,9 @@ on:
   push:
     paths:
       - '.github/workflows/compilar-interfaz-mir.yml'
+      - 'native-v2/**'
+      - 'native_pending/**'
+      - 'legacy-v1.5/payload/assets/**'
   workflow_dispatch:
 
 permissions:
@@ -120,6 +123,10 @@ jobs:
           $process = Start-Process -FilePath $exe -ArgumentList '--version' -WorkingDirectory (Split-Path $exe -Parent) -PassThru
           if (!$process.WaitForExit(30000)) { $process.Kill(); throw "MiR.exe no inició correctamente" }
           if ($process.ExitCode -ne 0) { throw "Falló arranque de MiR.exe con código $($process.ExitCode)" }
+      - name: Verificar que el binario Flutter incluya la UI MiR actualizada
+        shell: pwsh
+        run: |
+          python mir/native-v2/verify_mir_release.py --portable mir/native-v2/dist/portable
       - name: Generar portable y su instalador de prueba
         shell: pwsh
         run: |
