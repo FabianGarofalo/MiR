@@ -229,38 +229,28 @@ Widget _miRActionIcon(String tooltip, Widget? existing, String? asset) {
     )
     # Los botones coloreados originales no centraban bien iconos Material.
     # Se reemplazan dos Ink, manteniendo sus menús e interacción.
-    iconDeco = """                    child: Ink(
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(_ToolbarTheme.iconRadius),
-                          color: hover ? widget.hoverColor : widget.color,
-                        ),
-                        child: icon)"""
-    newIconDeco = """                    child: Container(
-                        width: _ToolbarTheme.buttonSize,
-                        height: _ToolbarTheme.buttonSize,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(_ToolbarTheme.iconRadius),
-                          border: Border.all(color: const Color(0xFF315052)),
-                          color: hover ? widget.hoverColor : widget.color,
-                        ),
-                        child: icon)"""
-    if toolbar.count(iconDeco) != 1:
-        raise RuntimeError(f"Icon button decoration changed: {toolbar.count(iconDeco)}")
-    toolbar = toolbar.replace(iconDeco, newIconDeco, 1)
-    submenuDeco = """                    child: Ink(
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(_ToolbarTheme.iconRadius),
-                          color: hover ? widget.hoverColor : widget.color,
-                        ),
-                        child: icon)"""
-    # Puede ser idéntico al bloque anterior; luego del primero queda uno.
-    if toolbar.count(submenuDeco) != 1:
-        raise RuntimeError(f"Submenu decoration changed: {toolbar.count(submenuDeco)}")
-    toolbar = toolbar.replace(submenuDeco, newIconDeco, 1)
+    icon_deco = """                child: Ink(
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(_ToolbarTheme.iconRadius),
+                      color: hover ? widget.hoverColor : widget.color,
+                    ),
+                    child: icon)"""
+    icon_new = """                child: Container(
+                    width: _ToolbarTheme.buttonSize,
+                    height: _ToolbarTheme.buttonSize,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(_ToolbarTheme.iconRadius),
+                      border: Border.all(color: const Color(0xFF315052)),
+                      color: hover ? widget.hoverColor : widget.color,
+                    ),
+                    child: icon)"""
+    if toolbar.count(icon_deco) != 2:
+        raise RuntimeError(
+            f"Se esperan dos botones icono; se hallaron {toolbar.count(icon_deco)}")
+    toolbar = toolbar.replace(icon_deco, icon_new)
 
     if toolbar.count("message: translate(widget.tooltip),") < 2:
         raise RuntimeError("No se localizaron las ayudas de la barra")
