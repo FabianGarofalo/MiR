@@ -632,13 +632,14 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
       Function(bool)? onTap, String tooltipText,
       {required bool canModify}) {
     return Tooltip(
-      message: "$tooltipText: ${enabled ? "ON" : "OFF"}",
+      message: tooltipText + (enabled ? ": Habilitado" : ": Deshabilitado"),
       waitDuration: Duration.zero,
       child: Container(
         decoration: BoxDecoration(
-          color: enabled
-              ? (canModify ? MyTheme.accent : MyTheme.accent.withOpacity(0.6))
-              : Colors.grey[700],
+          color: enabled ? _miRField : _miRBg,
+          border: Border.all(
+              color: enabled ? _miRAccent : _miREdge,
+              width: enabled ? 1.2 : 0.8),
           borderRadius: BorderRadius.circular(10.0),
         ),
         padding: EdgeInsets.all(8.0),
@@ -653,7 +654,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
               Expanded(
                 child: Icon(
                   iconData,
-                  color: Colors.white,
+                  color: enabled ? _miRAccent : _miRMuted,
                 ),
               ),
             ],
@@ -677,7 +678,8 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
       padding: EdgeInsets.all(5.0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10.0),
-        color: Theme.of(context).colorScheme.background,
+        color: _miRCard,
+        border: Border.all(color: _miREdge),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2),
@@ -691,8 +693,8 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            translate("Permissions"),
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            'Permisos de la sesión',
+            style: const TextStyle(color: _miRText, fontSize: 13, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ).marginOnly(left: 4.0, bottom: 8.0),
           Expanded(
@@ -715,7 +717,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.audio = enabled;
                           });
                         },
-                        translate('Enable audio'),
+                        'Audio',
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
@@ -730,7 +732,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.recording = enabled;
                           });
                         },
-                        translate('Enable recording session'),
+                        'Grabación',
                         canModify: canModifyPermission,
                       ),
                     ]
@@ -747,7 +749,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.keyboard = enabled;
                           });
                         },
-                        translate('Enable keyboard/mouse'),
+                        'Teclado y mouse',
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
@@ -762,7 +764,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.clipboard = enabled;
                           });
                         },
-                        translate('Enable clipboard'),
+                        'Portapapeles',
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
@@ -777,7 +779,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.audio = enabled;
                           });
                         },
-                        translate('Enable audio'),
+                        'Audio',
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
@@ -792,7 +794,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.file = enabled;
                           });
                         },
-                        translate('Enable file copy and paste'),
+                        'Archivos',
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
@@ -807,7 +809,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.restart = enabled;
                           });
                         },
-                        translate('Enable remote restart'),
+                        'Reinicio remoto',
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
@@ -822,7 +824,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.recording = enabled;
                           });
                         },
-                        translate('Enable recording session'),
+                        'Grabación',
                         canModify: canModifyPermission,
                       ),
                       // only windows support block input
@@ -839,7 +841,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                               client.blockInput = enabled;
                             });
                           },
-                          translate('Enable blocking user input'),
+                          'Bloquear entrada local',
                           canModify: canModifyPermission,
                         ),
                       if (bind.mainSupportedPrivacyModeImpls() != '[]')
@@ -855,7 +857,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                               client.privacyMode = enabled;
                             });
                           },
-                          translate('Enable privacy mode'),
+                          'Privacidad',
                           canModify: canModifyPermission,
                         )
                     ],
