@@ -11,6 +11,7 @@ import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:get/get.dart';
 
 const _background = Color(0xFF0B191A);
@@ -500,7 +501,20 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
                 style: TextStyle(color: _muted, fontSize: 10),
                 maxLines: 2)),
               const SizedBox(width: 8),
-              SizedBox(width: 185, child: OnlineStatusWidget()),
+              Offstage(offstage: true, child: OnlineStatusWidget()),
+              const SizedBox(width: 5),
+              Obx(() {
+                final current = stateGlobal.svcStatus.value;
+                final ready = current == SvcStatus.ready;
+                return Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.circle, size: 8,
+                    color: ready ? _accent : _warning),
+                  const SizedBox(width: 6),
+                  Text(ready ? 'Conectado' : 'Revisar conexión',
+                    style: TextStyle(
+                      color: ready ? _accent : _warning, fontSize: 11)),
+                ]);
+              }),
             ]),
           ),
         ]),
