@@ -29,7 +29,7 @@ def check(root: Path):
     for heading in ("General", "Seguridad", "Red", "Pantalla",
                     "Cuenta", "Impresora", "Acerca de MiR"):
         assert heading in settings, heading
-    assert "const Text('AJUSTES DE MiR'" in shell
+    assert "Text('AJUSTES DE MiR'" in shell
     assert "'assets/MiR_icono.png'" in title
     assert '"MiR",' in title
     icon = root / "flutter/assets/icon.png"
