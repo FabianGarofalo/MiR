@@ -1,0 +1,55 @@
+name: MiR | Analizar interfaz Flutter nativa
+on:
+  push:
+    paths:
+      - 'native-v2/flutter/mir_home_shell.dart'
+      - 'native-v2/apply_mir_home.py'
+      - 'native-v2/verify_mir_home.py'
+      - '.github/workflows/analizar-interfaz-mir.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  analizar-interfaz:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - name: Código MiR
+        uses: actions/checkout@v4
+      - name: Cliente Flutter/Rust fijado
+        uses: actions/checkout@v4
+        with:
+          repository: rustdesk/rustdesk
+          ref: 95cca3f661f635b3cc85c04935fe8d96d8f432ef
+          path: upstream
+          submodules: false
+          persist-credentials: false
+      - name: Código puente generado en compilación validada
+        uses: actions/download-artifact@v4
+        with:
+          name: mir-v2-bridge-generado
+          run-id: 45073323311
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: upstream
+      - name: Adaptar MiR y conectar pantalla nativa
+        run: |
+          python3 native-v2/stage_components.py --upstream upstream
+          python3 native-v2/apply_mir_native.py --upstream upstream --repo .
+          python3 native-v2/finish_mir_identity.py --upstream upstream --repo .
+          python3 native-v2/apply_mir_home.py --upstream upstream --repo .
+          python3 native-v2/verify_mir_home.py --upstream upstream
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.24.5'
+          cache: true
+      - name: Resolver dependencias
+        working-directory: upstream/flutter
+        run: flutter pub get
+      - name: Analizar archivo de interfaz MiR
+        working-directory: upstream/flutter
+        run: flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart
