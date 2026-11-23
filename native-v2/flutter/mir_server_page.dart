@@ -885,6 +885,56 @@ class _CmControlPanel extends StatelessWidget {
         : buildUnAuthorized(context);
   }
 
+  Widget _miRCallCard({
+    required String title,
+    required String subtitle,
+    required Widget controls,
+  }) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(4, 6, 4, 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _miRCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _miRAccent, width: 1),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.call_outlined, color: _miRAccent, size: 17),
+            const SizedBox(width: 7),
+            Expanded(child: Text(title, style: const TextStyle(
+              color: _miRText, fontSize: 13, fontWeight: FontWeight.w700))),
+          ]),
+          const SizedBox(height: 4),
+          Text(subtitle, style: const TextStyle(
+            color: _miRMuted, fontSize: 10.5), maxLines: 2,
+            overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 7),
+          controls,
+        ],
+      ),
+    );
+  }
+
+  String _miRLabel(String label) {
+    switch (label) {
+      case 'Accept': return 'Aceptar';
+      case 'Dismiss': return 'Rechazar';
+      case 'Audio input': return 'Micrófono';
+      case 'Stop voice call': return 'Finalizar llamada';
+      case 'Disconnect': return 'Desconectar';
+      case 'Cancel': return 'Cancelar';
+      case 'Close': return 'Cerrar';
+      case 'Elevate': return 'Elevar permisos';
+      case 'Accept and Elevate': return 'Aceptar y elevar';
+      case 'Switch Sides': return 'Cambiar control';
+      default: return translate(label);
+    }
+  }
+
   buildAuthorized(BuildContext context) {
     final bool canElevate = bind.cmCanElevate();
     final model = Provider.of<ServerModel>(context);
@@ -896,7 +946,10 @@ class _CmControlPanel extends StatelessWidget {
       children: [
         Offstage(
           offstage: !client.inVoiceCall,
-          child: Row(
+          child: _miRCallCard(
+            title: 'Llamada de voz activa',
+            subtitle: 'Elegí el micrófono o finalizá la llamada.',
+            controls: Row(
             children: [
               Expanded(
                 child: buildButton(context,
@@ -978,11 +1031,15 @@ class _CmControlPanel extends StatelessWidget {
                 ),
               )
             ],
+            ),
           ),
         ),
         Offstage(
           offstage: !client.incomingVoiceCall,
-          child: Row(
+          child: _miRCallCard(
+            title: 'Llamada entrante',
+            subtitle: 'Aceptá o rechazá la solicitud de audio.',
+            controls: Row(
             children: [
               Expanded(
                 child: buildButton(context,
@@ -1011,6 +1068,7 @@ class _CmControlPanel extends StatelessWidget {
                 ),
               )
             ],
+            ),
           ),
         ),
         Offstage(
@@ -1152,24 +1210,34 @@ class _CmControlPanel extends StatelessWidget {
     Widget textWidget;
     if (icon != null) {
       textWidget = Text(
-        translate(text),
-        style: TextStyle(color: textColor),
+        _miRLabel(text),
+        style: TextStyle(color: (text == 'Disconnect' ||
+              text == 'Dismiss' || text == 'Stop voice call')
+                ? _miRDanger : _miRText,
+                fontSize: 11.5, fontWeight: FontWeight.w600),
         textAlign: TextAlign.center,
       );
     } else {
       textWidget = Expanded(
         child: Text(
-          translate(text),
-          style: TextStyle(color: textColor),
+          _miRLabel(text),
+          style: TextStyle(color: (text == 'Disconnect' ||
+              text == 'Dismiss' || text == 'Stop voice call')
+                ? _miRDanger : _miRText,
+                fontSize: 11.5, fontWeight: FontWeight.w600),
           textAlign: TextAlign.center,
         ),
       );
     }
     final borderRadius = BorderRadius.circular(10.0);
     final btn = Container(
-      height: 28,
+      height: 36,
       decoration: BoxDecoration(
-          color: color, borderRadius: borderRadius, border: border),
+          color: (text == 'Disconnect' || text == 'Dismiss' ||
+                  text == 'Stop voice call')
+              ? const Color(0xFF64363B) : _miRField,
+          borderRadius: borderRadius,
+          border: border ?? Border.all(color: _miREdge, width: 0.8)),
       child: InkWell(
         borderRadius: borderRadius,
         onTap: () {
