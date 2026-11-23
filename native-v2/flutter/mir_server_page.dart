@@ -103,7 +103,7 @@ class _DesktopServerPageState extends State<DesktopServerPage>
       child: Consumer<ServerModel>(
         builder: (context, serverModel, child) {
           final body = Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.background,
+            backgroundColor: _miRBg,
             body: MiRConnectionTheme(child: ConnectionManager()),
           );
           return isLinux
@@ -490,9 +490,9 @@ class _CmHeaderState extends State<_CmHeader>
                     child: Text(
                   client.name,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+                    color: _miRText,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
                     overflow: TextOverflow.ellipsis,
                   ),
                   maxLines: 1,
@@ -500,7 +500,7 @@ class _CmHeaderState extends State<_CmHeader>
                 FittedBox(
                   child: Text(
                     "(${client.peerId})",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(color: _miRMuted, fontSize: 11),
                   ),
                 ),
                 if (client.type_() == ClientType.terminal)
@@ -537,11 +537,9 @@ class _CmHeaderState extends State<_CmHeader>
                   children: [
                     Text(
                       client.authorized
-                          ? client.disconnected
-                              ? translate("Disconnected")
-                              : translate("Connected")
-                          : "${translate("Request access to your device")}...",
-                      style: TextStyle(color: Colors.white),
+                          ? (client.disconnected ? 'Desconectado' : 'Conectado')
+                          : 'Solicitud de acceso…',
+                      style: const TextStyle(color: _miRAccent, fontSize: 11),
                     ).marginOnly(right: 8.0),
                     if (client.authorized)
                       Obx(
@@ -549,7 +547,7 @@ class _CmHeaderState extends State<_CmHeader>
                           formatDurationToTime(
                             Duration(seconds: _time.value),
                           ),
-                          style: TextStyle(color: Colors.white),
+                          style: const TextStyle(color: _miRMuted, fontSize: 11),
                         ),
                       )
                   ],
