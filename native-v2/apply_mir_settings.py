@@ -176,6 +176,46 @@ def apply(upstream: Path, repo: Path) -> list[str]:
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, path)
         changes.append(dest)
+    # Paleta MiR también en diálogos, menús, popups y opciones nativas
+    # que usan MyTheme en vez de heredar Theme del contenedor principal.
+    common_path = "flutter/lib/common.dart"
+    common = (upstream / common_path).read_text(encoding="utf-8")
+    for name, old_value, new_value in (
+        ("accent", "static const Color accent = Color(0xFF0071FF);",
+         "static const Color accent = Color(0xFF75E0C1);"),
+        ("accent50", "static const Color accent50 = Color(0x770071FF);",
+         "static const Color accent50 = Color(0x7775E0C1);"),
+        ("accent80", "static const Color accent80 = Color(0xAA0071FF);",
+         "static const Color accent80 = Color(0xAA75E0C1);"),
+        ("button", "static const Color button = Color(0xFF2C8CFF);",
+         "static const Color button = Color(0xFF75E0C1);"),
+    ):
+        common = once(common, old_value, new_value, "Color global " + name)
+    start = common.index("  static ThemeData darkTheme = ThemeData(")
+    end = common.index("  static ThemeMode getThemeModePreference()", start)
+    dark = common[start:end]
+    for old_value, new_value in (
+        ("scaffoldBackgroundColor: Color(0xFF18191E)",
+         "scaffoldBackgroundColor: Color(0xFF0B191A)"),
+        ("dialogBackgroundColor: Color(0xFF18191E)",
+         "dialogBackgroundColor: Color(0xFF132629)"),
+        ("cardColor: Color(0xFF24252B)",
+         "cardColor: Color(0xFF132629)"),
+        ("fillColor: Color(0xFF24252B)",
+         "fillColor: Color(0xFF193236)"),
+        ("background: Color(0xFF24252B)",
+         "background: Color(0xFF0B191A)"),
+        ("primary: Colors.blue",
+         "primary: accent"),
+        ("backgroundColor: MaterialStatePropertyAll(Color(0xFF121212))",
+         "backgroundColor: MaterialStatePropertyAll(Color(0xFF132629))"),
+    ):
+        if old_value not in dark:
+            raise RuntimeError(f"Tema global alterado: falta {old_value}")
+        dark = dark.replace(old_value, new_value, 1)
+    common = common[:start] + dark + common[end:]
+    (upstream / common_path).write_text(common, encoding="utf-8")
+    changes.append(common_path)
     return changes
 
 if __name__ == "__main__":
