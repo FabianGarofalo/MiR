@@ -12,6 +12,7 @@ import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/mir/mir_settings_router.dart';
+import 'package:flutter_hbb/mir/mir_receiver_diagnostics.dart';
 import 'package:get/get.dart';
 
 const _background = Color(0xFF0B191A);
@@ -293,19 +294,21 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionTitle('Receptor MiR',
-                subtitle: 'Acceso desatendido y arranque con Windows.'),
+                subtitle: 'Recibir conexiones desde otra computadora.'),
             const SizedBox(height: 17),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Icon(Icons.info_outline, color: _warning, size: 21),
               const SizedBox(width: 10),
               Expanded(child: Text(
                 bind.mainIsInstalled()
-                    ? 'MiR figura instalado. Verificá el servicio antes de confiar en el acceso desatendido.'
-                    : 'Modo portable: para recibir conexiones antes del PIN necesitás instalar el receptor MiR. No se modifica automáticamente otro servicio existente.',
+                    ? 'MiR está instalado. Comprobá que la recepción funcione antes de depender del acceso desatendido.'
+                    : 'El modo portable debería recibir conexiones mientras MiR esté abierto y Windows tenga una sesión iniciada. Para recibir antes del PIN necesitás el servicio receptor instalado.',
                 style: const TextStyle(color: _foreground, fontSize: 13, height: 1.45),
               )),
             ]),
             const SizedBox(height: 17),
+            const MiRReceiverDiagnostics(),
+            const SizedBox(height: 14),
             _action('Configuración de red', Icons.settings_ethernet_rounded,
                 () => _settings(SettingsTabKey.network), secondary: true),
             const SizedBox(height: 10),
@@ -371,6 +374,9 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
           children: [
             _sectionTitle('Diagnóstico local',
                 subtitle: 'Información de estado sin exportar contraseñas ni identificadores.'),
+            const SizedBox(height: 13),
+            const MiRReceiverDiagnostics(),
+            const Divider(height: 30, color: _edge),
             const SizedBox(height: 16),
             FutureBuilder<String>(
               key: ValueKey(_diagnosticTick),
