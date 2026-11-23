@@ -62,6 +62,12 @@ def main() -> None:
     target = upstream / "flutter/lib/mir/mir_home_shell.dart"
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(origin, target)
+    # El diagnóstico de recepción utiliza las opciones REALES del motor.
+    receiver = repo / "native-v2/flutter/mir_receiver_diagnostics.dart"
+    if not receiver.is_file():
+        raise RuntimeError("Falta diagnóstico del receptor portable MiR")
+    receiver_target = upstream / "flutter/lib/mir/mir_receiver_diagnostics.dart"
+    shutil.copyfile(receiver, receiver_target)
     report = {
         "home_replaced": True,
         "widget": "MiRHomeShell",
