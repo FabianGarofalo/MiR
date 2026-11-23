@@ -104,7 +104,6 @@ def main() -> None:
         backgroundColor: const MaterialStatePropertyAll(Color(0xFF132629)),
         surfaceTintColor: const MaterialStatePropertyAll(Colors.transparent),
         shadowColor: const MaterialStatePropertyAll(Colors.black54),
-        foregroundColor: const MaterialStatePropertyAll(Color(0xFFEDF6F3)),
         side: MaterialStateProperty.all(BorderSide(""",
         "fondo de todos los submenús",
     )
