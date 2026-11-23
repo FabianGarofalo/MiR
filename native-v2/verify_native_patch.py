@@ -22,10 +22,10 @@ def verify(root: Path) -> None:
     assert 'VALUE "ProductName", "MiR"' in resource
     assert 'VALUE "CompanyName", "EcoEtika S.A.S."' in resource
     assert 'VALUE "LegalCopyright", "Copyright' in resource
-    about = (root / "flutter/lib/desktop/pages/desktop_setting_page.dart").read_text(encoding="utf-8")
+    about = (root / "flutter/lib/mir/mir_about_page.dart").read_text(encoding="utf-8")
     home = (root / "flutter/lib/desktop/pages/desktop_home_page.dart").read_text(encoding="utf-8")
     assert "'Acerca de MiR'" in about
-    assert "Desarrollado sobre la base de RustDesk (AGPL-3.0)." in about
+    assert "AGPL-3.0" in about and "EcoEtika S.A.S." in about
     assert "assets/MiR_logo.png" in about and "assets/EcoEtika_logo.png" in about
     assert "assets/MiR_logo.png" in home
     for img in ("MiR_logo.png", "EcoEtika_logo.png"):
