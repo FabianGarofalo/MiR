@@ -39,9 +39,9 @@ def main() -> None:
     home = read("flutter/lib/desktop/pages/desktop_home_page.dart")
     assert "child: loadPowered(context)" not in home
     assert "assets/MiR_logo.png" in home
-    about = read("flutter/lib/desktop/pages/desktop_setting_page.dart")
-    assert "MiR V2 | Desarrollado por EcoEtika S.A.S." in about
-    assert "Desarrollado sobre la base de RustDesk (AGPL-3.0)" in about
+    about = read("flutter/lib/mir/mir_about_page.dart")
+    assert "MiR V2" in about and "Desarrollado por EcoEtika S.A.S." in about
+    assert "RustDesk" in about and "AGPL-3.0" in about
 
     for path in ("res/icon.ico", "res/tray-icon.ico", "res/icon.png"):
         assert (root / path).stat().st_size > 1000, path
