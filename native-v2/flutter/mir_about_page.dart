@@ -2,6 +2,7 @@
 // Los derechos y licencias del motor se conservan en la sección legal.
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
