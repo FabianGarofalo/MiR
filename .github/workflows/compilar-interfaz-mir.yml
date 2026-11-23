@@ -51,6 +51,11 @@ jobs:
           if (!(Test-Path "previous-portable/MiR.exe")) { throw "Falta MiR.exe original" }
           if (!(Test-Path "previous-portable/librustdesk.dll")) { throw "Falta DLL Rust integrada" }
           if (Test-Path "previous-portable/rustdesk.exe") { throw "No se acepta un ejecutable externo" }
+          # El CMake original copia la biblioteca integrada desde target/release.
+          # Reutilizar exactamente la biblioteca ya compilada en el build validado.
+          New-Item -ItemType Directory "upstream/target/release" -Force | Out-Null
+          Copy-Item "previous-portable/librustdesk.dll" "upstream/target/release/librustdesk.dll" -Force
+          if (!(Test-Path "upstream/target/release/librustdesk.dll")) { throw "Falta DLL integrada para CMake" }
       - name: Aplicar UI MiR nativa con acciones reales
         shell: pwsh
         run: |
