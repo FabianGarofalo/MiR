@@ -55,7 +55,7 @@ def apply(upstream: Path, repo: Path) -> list[str]:
         "import 'package:flutter_hbb/common.dart';\nimport 'package:flutter_hbb/mir/mir_about_page.dart';",
         "Import Acerca de MiR")
     settings = once(settings,
-        "import 'package:url_launcher/url_launcher_string.dart';\\n", "",
+        "import 'package:url_launcher/url_launcher_string.dart';\n", "",
         "Quitar enlace externo heredado")
     settings = once(settings, "const Color _accentColor = MyTheme.accent;",
         "const Color _accentColor = Color(0xFF75E0C1);", "Acento MiR")
