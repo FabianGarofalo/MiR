@@ -12,6 +12,7 @@ import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:flutter_hbb/mir/mir_settings_router.dart';
 import 'package:get/get.dart';
 
 const _background = Color(0xFF0B191A);
@@ -35,6 +36,8 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
   int _section = 0;
   bool _showPassword = false;
   int _diagnosticTick = 0;
+  bool _inSettings = false;
+  SettingsTabKey _selectedSettingsTab = SettingsTabKey.general;
 
   static const _sections = <String>[
     'Mis equipos',
@@ -44,7 +47,40 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    MiRSettingsRouter.homeMounted = true;
+    MiRSettingsRouter.revision.addListener(_onSettingsRequested);
+  }
+
+  void _onSettingsRequested() {
+    if (!mounted) return;
+    final index = MiRSettingsRouter.requestedTabIndex;
+    final tabs = DesktopSettingPage.tabKeys;
+    if (index < 0 || index >= tabs.length) return;
+    final requested = tabs[index];
+    if (!_inSettings) {
+      setState(() {
+        _selectedSettingsTab = requested;
+        _inSettings = true;
+      });
+    } else if (_selectedSettingsTab != requested) {
+      setState(() => _selectedSettingsTab = requested);
+      // Preservar controlador y controles de ajustes; solo cambia la sección.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _inSettings) DesktopSettingPage.switch2page(requested);
+      });
+    }
+  }
+
+  void _backToMiR() {
+    if (_inSettings) setState(() => _inSettings = false);
+  }
+
+  @override
   void dispose() {
+    MiRSettingsRouter.revision.removeListener(_onSettingsRequested);
+    MiRSettingsRouter.homeMounted = false;
     _remoteId.dispose();
     super.dispose();
   }
@@ -61,7 +97,7 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
   }
 
   void _settings(SettingsTabKey page) {
-    DesktopTabPage.onAddSetting(initialPage: page);
+    MiRSettingsRouter.open(DesktopSettingPage.tabKeys.indexOf(page));
   }
 
   Widget _cardBox({
@@ -392,6 +428,12 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
   }
 
   Widget _body() {
+    if (_inSettings) {
+      return DesktopSettingPage(
+        key: const ValueKey('mir-settings-inline'),
+        initialTabkey: _selectedSettingsTab,
+      );
+    }
     switch (_section) {
       case 0: return _devices();
       case 1: return _myComputer();
@@ -411,6 +453,20 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
         background: _background, onBackground: _foreground,
       ),
       dividerColor: _edge,
+      cardTheme: CardTheme(
+        color: _card,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: _edge, width: 0.8),
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: MaterialStateProperty.resolveWith((states) =>
+            states.contains(MaterialState.selected) ? _accent : _field),
+        checkColor: MaterialStateProperty.all(_background),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true, fillColor: _field,
         hintStyle: const TextStyle(color: _muted),
@@ -458,7 +514,29 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
               ),
             ]),
           ),
-          Container(
+          if (_inSettings)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(15, 0, 15, 10),
+              child: Row(children: [
+                OutlinedButton.icon(
+                  onPressed: _backToMiR,
+                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                  label: const Text('Volver a MiR'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _accent,
+                    side: const BorderSide(color: _edge),
+                    backgroundColor: _field,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(child: Text('AJUSTES DE MiR',
+                  style: TextStyle(color: _foreground, fontSize: 14,
+                    fontWeight: FontWeight.w700))),
+              ]),
+            ),
+          if (!_inSettings) Container(
             padding: const EdgeInsets.fromLTRB(15, 1, 15, 12),
             child: LayoutBuilder(builder: (context, c) {
               final width = c.maxWidth;
