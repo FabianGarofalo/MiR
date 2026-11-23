@@ -445,6 +445,8 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final mirTheme = theme.copyWith(
+      textTheme: theme.textTheme.apply(
+          bodyColor: _foreground, displayColor: _foreground),
       scaffoldBackgroundColor: _background,
       colorScheme: const ColorScheme.dark(
         primary: _accent, onPrimary: _background,
