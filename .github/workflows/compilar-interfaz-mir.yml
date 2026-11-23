@@ -65,6 +65,8 @@ jobs:
           python mir/native-v2/apply_mir_home.py --upstream upstream --repo mir --report mir/native-v2/mir-home-report.json
           python mir/native-v2/verify_native_patch.py --upstream upstream
           python mir/native-v2/verify_mir_identity.py --upstream upstream
+          python mir/native-v2/apply_mir_settings.py --upstream upstream --repo mir --report mir/native-v2/mir-settings-report.json
+          python mir/native-v2/verify_mir_settings.py --upstream upstream
           python mir/native-v2/verify_mir_home.py --upstream upstream
       - name: Flutter Windows 3.24.5
         uses: subosito/flutter-action@v2
@@ -92,7 +94,7 @@ jobs:
         run: |
           flutter pub get
           if ($LASTEXITCODE -ne 0) { throw "No se resolvieron las dependencias Flutter" }
-          flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart
+          flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart lib/mir/mir_about_page.dart lib/mir/mir_settings_router.dart lib/desktop/pages/desktop_setting_page.dart lib/desktop/pages/desktop_tab_page.dart
           if ($LASTEXITCODE -ne 0) { throw "Error de código Dart MiR" }
       - name: Compilar nuevo MiR.exe y assets Flutter
         shell: pwsh
@@ -153,4 +155,5 @@ jobs:
             mir/native-v2/dist/MiR_V2_Instalador_PREVIEW_SIN_FIRMA.exe
             mir/native-v2/dist/SHA256.json
             mir/native-v2/mir-home-report.json
+            mir/native-v2/mir-settings-report.json
           if-no-files-found: error
