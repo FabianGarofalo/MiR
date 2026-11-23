@@ -65,7 +65,7 @@ def apply(upstream: Path, repo: Path) -> list[str]:
     legacy_start = settings.index("class _About extends StatefulWidget {")
     legacy_end = settings.index("//#endregion", legacy_start)
     settings = settings[:legacy_start] + (
-        "// Acerca de: componente MiRAboutPage, con créditos de terceros preservados.\\n\\n"
+        "// Acerca de: componente MiRAboutPage, con créditos de terceros preservados.\n\n"
     ) + settings[legacy_end:]
 
     a = settings.index("class _DesktopSettingPageState")
