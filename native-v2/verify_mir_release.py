@@ -34,7 +34,7 @@ def check(portable: Path) -> None:
     if (portable / "rustdesk.exe").exists():
         raise RuntimeError("Motor externo inesperado: rustdesk.exe")
     data = snapshot.read_bytes()
-    if data[:4] != b"\\x7fELF":
+    if data[:4] != bytes.fromhex("7f454c46"):
         raise RuntimeError("Snapshot Flutter AOT inválido")
     for label in (*REQUIRED_TEXT, *REQUIRED_CLASSES):
         if label.encode("utf-8") not in data:
