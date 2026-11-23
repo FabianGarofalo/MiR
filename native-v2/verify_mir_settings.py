@@ -25,6 +25,9 @@ def check(root: Path):
     assert "MiRSettingsRouter.open(DesktopSettingPage.tabKeys.indexOf(initialPage))" in tabs
     assert "homeMounted" in router and "revision.value += 1" in router
     assert "children.add(const MiRAboutPage());" in settings
+    for legacy in ("About RustDesk", "Slogan_tip", "Purslane Tech Pte. Ltd.",
+                   "https://rustdesk.com/privacy.html", "https://rustdesk.com"):
+        assert legacy not in settings, f"Marca heredada en Ajustes: {legacy}"
     assert "SingleChildScrollView(" in settings and "PageView(" in settings
     for heading in ("General", "Seguridad", "Red", "Pantalla",
                     "Cuenta", "Impresora", "Acerca de MiR"):
