@@ -28,6 +28,10 @@ def main() -> None:
     assert "bind.mainUpdateTemporaryPassword()" in shell
     assert "bind.mainGetConnectStatus()" in shell
     assert "OnlineStatusWidget()" in shell
+    for text in ("SvcStatus.connecting", "'Conectando…'", "'Sin conexión'",
+                 "'Abrir diagnóstico de conexión'", "_diagnosticTick++"):
+        assert text in shell, f"Estado de conexión sin diagnóstico: {text}"
+    assert "'Revisar conexión'" not in shell
     assert "Image.asset('assets/MiR_logo.png'" in shell
     assert "No se modifica automáticamente otro servicio existente" in shell
     assert "MiR V2 | Desarrollado por EcoEtika S.A.S." in shell

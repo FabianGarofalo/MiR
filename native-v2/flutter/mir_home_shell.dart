@@ -598,14 +598,40 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
               Obx(() {
                 final current = stateGlobal.svcStatus.value;
                 final ready = current == SvcStatus.ready;
-                return Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.circle, size: 8,
-                    color: ready ? _accent : _warning),
-                  const SizedBox(width: 6),
-                  Text(ready ? 'Conectado' : 'Revisar conexión',
-                    style: TextStyle(
-                      color: ready ? _accent : _warning, fontSize: 11)),
-                ]);
+                final connecting = current == SvcStatus.connecting;
+                final label = ready
+                    ? 'Conectado'
+                    : connecting
+                        ? 'Conectando…'
+                        : 'Sin conexión';
+                final color = ready
+                    ? _accent
+                    : connecting
+                        ? _warning
+                        : const Color(0xFFE78C86);
+                return Tooltip(
+                  message: 'Abrir diagnóstico de conexión',
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _inSettings = false;
+                        _section = 3;
+                        _diagnosticTick++;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 3),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.circle, size: 8, color: color),
+                        const SizedBox(width: 6),
+                        Text(label, style: TextStyle(
+                            color: color, fontSize: 11)),
+                      ]),
+                    ),
+                  ),
+                );
               }),
             ]),
           ),
