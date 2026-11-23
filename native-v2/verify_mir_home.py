@@ -33,7 +33,14 @@ def main() -> None:
         assert text in shell, f"Estado de conexión sin diagnóstico: {text}"
     assert "'Revisar conexión'" not in shell
     assert "Image.asset('assets/MiR_logo.png'" in shell
-    assert "No se modifica automáticamente otro servicio existente" in shell
+    assert "El modo portable debería recibir conexiones" in shell
+    assert "MiRReceiverDiagnostics()" in shell
+    receiver = (root / "flutter/lib/mir/mir_receiver_diagnostics.dart").read_text(encoding="utf-8")
+    for check in ("mainGetBoolOption(kOptionStopService)",
+                  "mainSetBoolOption(kOptionStopService, false)",
+                  "bind.mainGetMyId()", "bind.mainGetConnectStatus()",
+                  "Habilitar recepción"):
+        assert check in receiver, check
     assert "MiR V2 | Desarrollado por EcoEtika S.A.S." in shell
     assert "mainGotoInstall(" not in shell
     assert "Stop-Service" not in shell
