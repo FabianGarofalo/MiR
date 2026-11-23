@@ -1264,7 +1264,9 @@ class _CmControlPanel extends StatelessWidget {
         _miRLabel(text),
         style: TextStyle(color: (text == 'Disconnect' ||
               text == 'Dismiss' || text == 'Stop voice call')
-                ? _miRDanger : _miRText,
+                ? _miRDanger
+                : (text == 'Accept' || text == 'Accept and Elevate')
+                    ? _miRBg : _miRText,
                 fontSize: 11.5, fontWeight: FontWeight.w600),
         textAlign: TextAlign.center,
       );
@@ -1274,7 +1276,9 @@ class _CmControlPanel extends StatelessWidget {
           _miRLabel(text),
           style: TextStyle(color: (text == 'Disconnect' ||
               text == 'Dismiss' || text == 'Stop voice call')
-                ? _miRDanger : _miRText,
+                ? _miRDanger
+                : (text == 'Accept' || text == 'Accept and Elevate')
+                    ? _miRBg : _miRText,
                 fontSize: 11.5, fontWeight: FontWeight.w600),
           textAlign: TextAlign.center,
         ),
@@ -1286,9 +1290,14 @@ class _CmControlPanel extends StatelessWidget {
       decoration: BoxDecoration(
           color: (text == 'Disconnect' || text == 'Dismiss' ||
                   text == 'Stop voice call')
-              ? const Color(0xFF64363B) : _miRField,
+              ? const Color(0xFF64363B)
+              : (text == 'Accept' || text == 'Accept and Elevate')
+                  ? _miRAccent
+                  : _miRField,
           borderRadius: borderRadius,
-          border: border ?? Border.all(color: _miREdge, width: 0.8)),
+          border: border ?? Border.all(
+            color: (text == 'Accept' || text == 'Accept and Elevate')
+                ? _miRAccent : _miREdge, width: 0.8)),
       child: InkWell(
         borderRadius: borderRadius,
         onTap: () {
