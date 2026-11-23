@@ -1,0 +1,151 @@
+name: MiR V2 | Compilar interfaz Windows con motor verificado
+
+on:
+  push:
+    paths:
+      - '.github/workflows/compilar-interfaz-mir.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  windows-ui:
+    name: MiR V2 interfaz Flutter + motor nativo previamente verificado
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - name: Código de MiR
+        uses: actions/checkout@v4
+        with:
+          path: mir
+      - name: Motor Flutter/Rust fijado
+        uses: actions/checkout@v4
+        with:
+          repository: rustdesk/rustdesk
+          ref: 95cca3f661f635b3cc85c04935fe8d96d8f432ef
+          path: upstream
+          submodules: false
+          persist-credentials: false
+      - name: Descargar puente ya compilado para el mismo origen
+        uses: actions/download-artifact@v4
+        with:
+          name: mir-v2-bridge-generado
+          run-id: 45073323311
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: upstream
+      - name: Descargar el motor nativo ya compilado y verificado
+        uses: actions/download-artifact@v4
+        with:
+          name: MiR-V2-Windows-Portable-e-Instalador-PREVIEW-SIN-FIRMA
+          run-id: 45073323311
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: previous
+      - name: Extraer motor y verificar identidad anterior
+        shell: pwsh
+        run: |
+          $zip = "previous/dist/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip"
+          if (!(Test-Path $zip)) { throw "Falta el portable original verificado" }
+          Expand-Archive -LiteralPath $zip -DestinationPath previous-portable -Force
+          if (!(Test-Path "previous-portable/MiR.exe")) { throw "Falta MiR.exe original" }
+          if (!(Test-Path "previous-portable/librustdesk.dll")) { throw "Falta DLL Rust integrada" }
+          if (Test-Path "previous-portable/rustdesk.exe") { throw "No se acepta un ejecutable externo" }
+      - name: Aplicar UI MiR nativa con acciones reales
+        shell: pwsh
+        run: |
+          python mir/native-v2/stage_components.py --upstream upstream --components mir/native_pending/lib --report mir/native-v2/integration-report.json
+          python mir/native-v2/apply_mir_native.py --upstream upstream --repo mir --report mir/native-v2/native-patch-report.json
+          python mir/native-v2/finish_mir_identity.py --upstream upstream --repo mir --report mir/native-v2/identity-report.json
+          python mir/native-v2/apply_mir_home.py --upstream upstream --repo mir --report mir/native-v2/mir-home-report.json
+          python mir/native-v2/verify_native_patch.py --upstream upstream
+          python mir/native-v2/verify_mir_identity.py --upstream upstream
+          python mir/native-v2/verify_mir_home.py --upstream upstream
+      - name: Flutter Windows 3.24.5
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.24.5'
+      - name: Preparar motor gráfico Flutter Windows compatible
+        shell: pwsh
+        run: |
+          flutter precache --windows
+          $bin = (Get-Command flutter).Source
+          $flutterRoot = Split-Path (Split-Path $bin -Parent) -Parent
+          Invoke-WebRequest -Uri "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip" -OutFile "engine-win.zip"
+          Expand-Archive -Path "engine-win.zip" -DestinationPath "engine-expanded"
+          $dst = Join-Path $flutterRoot "bin/cache/artifacts/engine/windows-x64-release"
+          $src = if (Test-Path "engine-expanded/windows-x64-release") { "engine-expanded/windows-x64-release" } else { "engine-expanded" }
+          Copy-Item "$src/*" $dst -Recurse -Force
+          if (!(Test-Path (Join-Path $dst "flutter_windows.dll"))) { throw "Falta Flutter Engine" }
+          $patch = (Resolve-Path "upstream/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff").Path
+          & git -C $flutterRoot apply $patch
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo aplicar parche Flutter del origen" }
+      - name: Resolver dependencias y analizar interfaz
+        shell: pwsh
+        working-directory: upstream/flutter
+        run: |
+          flutter pub get
+          if ($LASTEXITCODE -ne 0) { throw "No se resolvieron las dependencias Flutter" }
+          flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart
+          if ($LASTEXITCODE -ne 0) { throw "Error de código Dart MiR" }
+      - name: Compilar nuevo MiR.exe y assets Flutter
+        shell: pwsh
+        working-directory: upstream/flutter
+        run: |
+          flutter build windows --release
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo compilar MiR.exe" }
+      - name: Integrar motor con interfaz MiR y probar arranque
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory "mir/native-v2/dist/portable" -Force | Out-Null
+          Copy-Item "previous-portable/*" "mir/native-v2/dist/portable/" -Recurse -Force
+          $new = "upstream/flutter/build/windows/x64/runner/Release"
+          if (!(Test-Path "$new/MiR.exe")) { throw "El cliente recompilado no genera MiR.exe" }
+          Copy-Item "$new/*" "mir/native-v2/dist/portable/" -Recurse -Force
+          $exe = (Resolve-Path "mir/native-v2/dist/portable/MiR.exe").Path
+          $meta = (Get-Item $exe).VersionInfo
+          if ($meta.ProductName -ne 'MiR') { throw "ProductName inesperado: $($meta.ProductName)" }
+          if (!(Test-Path "mir/native-v2/dist/portable/librustdesk.dll")) { throw "Falta el motor remoto" }
+          if (Test-Path "mir/native-v2/dist/portable/rustdesk.exe") { throw "No se debe incluir rustdesk.exe" }
+          $process = Start-Process -FilePath $exe -ArgumentList '--version' -WorkingDirectory (Split-Path $exe -Parent) -PassThru
+          if (!$process.WaitForExit(30000)) { $process.Kill(); throw "MiR.exe no inició correctamente" }
+          if ($process.ExitCode -ne 0) { throw "Falló arranque de MiR.exe con código $($process.ExitCode)" }
+      - name: Generar portable y su instalador de prueba
+        shell: pwsh
+        run: |
+          $portable = "mir/native-v2/dist/portable"
+          Copy-Item "upstream/LICENCE" "$portable/LICENCE" -Force
+          Copy-Item "mir/legacy-v1.5/payload/MiRemoto.ico" "$portable/MiR.ico" -Force
+          @'
+          MiR V2 — INTERFAZ NATIVA MI R (PREVIEW SIN FIRMA)
+          Aplicación principal: MiR.exe. Motor remoto incluido.
+          No requiere instalación separada de RustDesk para abrir la aplicación.
+          No desinstalar receptor anterior hasta verificar recepción con bloqueo, reinicio y antes del PIN.
+          Sin firma digital: si el antivirus lo bloquea, no desactivar la protección.
+          '@ | Set-Content "$portable/LEER_ANTES_DE_USAR.txt" -Encoding UTF8
+          Compress-Archive -Path "$portable/*" -DestinationPath "mir/native-v2/dist/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip" -Force
+          $source = (Resolve-Path $portable).Path
+          $iscc = "C:/Program Files (x86)/Inno Setup 6/ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc "/DSourceDir=$source" "mir/native-v2/packaging/MiR-preview.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Falló generación del instalador MiR" }
+      - name: Generar hash SHA-256
+        shell: pwsh
+        run: |
+          Get-ChildItem "mir/native-v2/dist" -File |
+            Get-FileHash -Algorithm SHA256 |
+            Select-Object Path,Hash |
+            ConvertTo-Json -Depth 3 |
+            Set-Content "mir/native-v2/dist/SHA256.json"
+      - name: Publicar MiR V2 con nueva interfaz para pruebas
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiR-V2-Interfaz-Propia-Windows-PREVIEW-SIN-FIRMA
+          path: |
+            mir/native-v2/dist/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip
+            mir/native-v2/dist/MiR_V2_Instalador_PREVIEW_SIN_FIRMA.exe
+            mir/native-v2/dist/SHA256.json
+            mir/native-v2/mir-home-report.json
+          if-no-files-found: error
