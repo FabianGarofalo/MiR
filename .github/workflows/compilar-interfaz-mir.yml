@@ -1,5 +1,5 @@
 name: MiR V2 | Compilar interfaz Windows con motor verificado
-# Build definitivo de esta revisión: Ajustes internos, navegación sin cierre, contraste, logos y créditos.
+# Build completo de saneamiento MiR: Ajustes, regreso, popups, iconos y Acerca de sin pantalla antigua.
 
 on:
   push:
