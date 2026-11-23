@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Validación estructural de la pantalla MiR nativa, no reemplaza la prueba visual."""
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+def main() -> None:
+    p = argparse.ArgumentParser()
+    p.add_argument("--upstream", type=Path, required=True)
+    opts = p.parse_args()
+    root = opts.upstream
+    home = (root / "flutter/lib/desktop/pages/desktop_home_page.dart").read_text(encoding="utf-8")
+    shell = (root / "flutter/lib/mir/mir_home_shell.dart").read_text(encoding="utf-8")
+
+    assert "return _buildBlock(child: const MiRHomeShell());" in home
+    assert "import 'package:flutter_hbb/mir/mir_home_shell.dart';" in home
+    for label in ("Mis equipos", "Mi equipo / Receptor",
+                  "Sesiones y archivos", "Diagnóstico"):
+        assert label in shell, label
+    for color in ("0xFF0B191A", "0xFF132629", "0xFF193236",
+                  "0xFF315052", "0xFF75E0C1"):
+        assert color in shell, color
+    assert "PeerTabPage()" in shell
+    assert "connect(context, id, isFileTransfer: files)" in shell
+    assert "model.serverId.text" in shell
+    assert "model.serverPasswd.text" in shell
+    assert "bind.mainUpdateTemporaryPassword()" in shell
+    assert "bind.mainGetConnectStatus()" in shell
+    assert "OnlineStatusWidget()" in shell
+    assert "Image.asset('assets/MiR_logo.png'" in shell
+    assert "No se modifica automáticamente otro servicio existente" in shell
+    assert "MiR V2 | Desarrollado por EcoEtika S.A.S." in shell
+    assert "mainGotoInstall(" not in shell
+    assert "Stop-Service" not in shell
+    assert "RustDesk.exe" not in shell
+    assert "rustdesk.exe" not in shell
+    print("MiR V2: portada propia, cuatro áreas y llamadas nativas verificadas en código.")
+
+if __name__ == "__main__":
+    main()
