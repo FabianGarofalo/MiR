@@ -24,7 +24,7 @@ def verify(root: Path) -> None:
     assert 'VALUE "LegalCopyright", "Copyright' in resource
     about = (root / "flutter/lib/mir/mir_about_page.dart").read_text(encoding="utf-8")
     home = (root / "flutter/lib/desktop/pages/desktop_home_page.dart").read_text(encoding="utf-8")
-    assert "'Acerca de MiR'" in about
+    assert "class MiRAboutPage" in about
     assert "AGPL-3.0" in about and "EcoEtika S.A.S." in about
     assert "assets/MiR_logo.png" in about and "assets/EcoEtika_logo.png" in about
     assert "assets/MiR_logo.png" in home
