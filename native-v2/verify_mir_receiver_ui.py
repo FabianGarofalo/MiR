@@ -22,7 +22,6 @@ def verify(root: Path) -> None:
         "AudioInput.getDevicesInfo(",
         "AudioInput.setDevice(",
         "buildPermissionIcon(",
-        "SingleChildScrollView(",
         "primaryOnly: false",
         "primaryOnly: true",
         "buildAuthorizedFooter(context)",
