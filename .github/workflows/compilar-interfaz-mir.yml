@@ -166,6 +166,11 @@ jobs:
           '@ | Set-Content "$portable/LEER_ANTES_DE_USAR.txt" -Encoding UTF8
           Compress-Archive -Path "$portable/*" -DestinationPath "mir/native-v2/dist/MiR_V2_Portable_PREVIEW_SIN_FIRMA.zip" -Force
           $source = (Resolve-Path $portable).Path
+          # MiR.exe es un launcher Flutter, no un servicio SCM verificado.
+          $installerSource = Get-Content "mir/native-v2/packaging/MiR-preview.iss" -Raw
+          if ($installerSource -match '(?i)--service-control|create-service-with-rollback|Name:\s*unattended\b') {
+            throw "MIR: instalador intenta registrar launcher Flutter como servicio Windows no validado"
+          }
           $iscc = "C:/Program Files (x86)/Inno Setup 6/ISCC.exe"
           if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress }
           & $iscc "/DSourceDir=$source" "mir/native-v2/packaging/MiR-preview.iss"
