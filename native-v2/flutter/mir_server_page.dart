@@ -8,6 +8,7 @@ import 'package:flutter_hbb/common/widgets/audio_input.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/mir/mir_connection_theme.dart';
+import 'package:flutter_hbb/mir/mir_receiver_layout.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:flutter_hbb/models/cm_file_model.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
@@ -371,59 +372,22 @@ class ConnectionManagerState extends State<ConnectionManager>
 
 Widget buildConnectionCard(Client client) {
   return Consumer<ServerModel>(
-    builder: (context, value, child) => LayoutBuilder(
-      builder: (context, viewport) {
-        // El receptor es una ventana compacta. El panel de llamada y TODAS
-        // las acciones requieren su propio espacio: nunca se superponen a
-        // permisos/cabecera ni se recortan al cambiar el estado.
-        final availableHeight = viewport.hasBoundedHeight
-            ? viewport.maxHeight
-            : kConnectionManagerWindowSizeClosedChat.height;
-        final footerLimit = availableHeight * 0.68;
-        return Column(
-          key: ValueKey(client.id),
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                key: const ValueKey('mir-receiver-information-scroll'),
-                physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _CmHeader(client: client),
-                    if (client.type_() != ClientType.file &&
-                        client.type_() != ClientType.portForward &&
-                        client.type_() != ClientType.terminal &&
-                        !client.disconnected)
-                      _PrivilegeBoard(client: client),
-                    _CmControlPanel(client: client, primaryOnly: false),
-                  ],
-                ),
-              ),
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: footerLimit),
-              child: SingleChildScrollView(
-                key: const ValueKey('mir-receiver-action-scroll'),
-                physics: const ClampingScrollPhysics(),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(0, 6, 0, 6),
-                  decoration: const BoxDecoration(
-                    color: _miRBg,
-                    border: Border(
-                      top: BorderSide(color: _miREdge, width: 0.7),
-                    ),
-                  ),
-                  child: _CmControlPanel(client: client, primaryOnly: true),
-                ),
-              ),
-            ),
-          ],
-        ).paddingSymmetric(vertical: 4.0, horizontal: 8.0);
-      },
+    builder: (context, value, child) => MiRReceiverLayout(
+      key: ValueKey(client.id),
+      information: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _CmHeader(client: client),
+          if (client.type_() != ClientType.file &&
+              client.type_() != ClientType.portForward &&
+              client.type_() != ClientType.terminal &&
+              !client.disconnected)
+            _PrivilegeBoard(client: client),
+          _CmControlPanel(client: client, primaryOnly: false),
+        ],
+      ),
+      criticalActions: _CmControlPanel(
+        client: client, primaryOnly: true),
     ),
   );
 }
