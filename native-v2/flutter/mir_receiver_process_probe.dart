@@ -40,7 +40,7 @@ class _MiRReceiverRuntimeCardState extends State<MiRReceiverRuntimeCard> {
   }
 
   static String _norm(String input) =>
-      input.trim().replaceAll('/', r'\').toLowerCase();
+      input.trim().replaceAll('/', String.fromCharCode(92)).toLowerCase();
 
   Future<_ReceiverReport> _readReceiver() async {
     if (!Platform.isWindows) {
