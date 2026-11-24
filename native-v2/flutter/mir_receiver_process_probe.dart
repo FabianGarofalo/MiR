@@ -151,10 +151,17 @@ $services=@(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-
     }
     try {
       // El script muestra consentimiento antes de cerrar procesos anteriores.
-      final quoted = '"' + corrector.path + '"';
-      await Process.start('cmd.exe', ['/c', 'start', '""', quoted],
-          workingDirectory: dir, mode: ProcessStartMode.detached,
-          runInShell: true);
+      final safePath = corrector.path.replaceAll("'", "''");
+      final safeDir = dir.replaceAll("'", "''");
+      final launch = "Start-Process -FilePath '" + safePath +
+          "' -WorkingDirectory '" + safeDir + "'";
+      final result = await Process.run(
+          'powershell.exe', ['-NoProfile', '-NonInteractive',
+          '-Command', launch]);
+      if (result.exitCode != 0) {
+        throw const ProcessException('powershell.exe', [],
+            'No se pudo abrir el corrector de receptor', 1);
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
