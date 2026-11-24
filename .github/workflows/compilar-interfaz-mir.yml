@@ -80,6 +80,7 @@ jobs:
           python mir/native-v2/verify_mir_connection_ui.py --upstream upstream
           Copy-Item "mir/native-v2/flutter/mir_server_page.dart" "upstream/flutter/lib/desktop/pages/server_page.dart" -Force
           Copy-Item "mir/native-v2/flutter/mir_receiver_layout.dart" "upstream/flutter/lib/mir/mir_receiver_layout.dart" -Force
+          Copy-Item "mir/native-v2/flutter/mir_receiver_process_probe.dart" "upstream/flutter/lib/mir/mir_receiver_process_probe.dart" -Force
           Copy-Item "mir/native-v2/flutter/test/mir_receiver_layout_test.dart" "upstream/flutter/test/mir_receiver_layout_test.dart" -Force
           python mir/native-v2/verify_mir_receiver_ui.py --upstream upstream
       - name: Flutter Windows 3.24.5
@@ -108,7 +109,7 @@ jobs:
         run: |
           flutter pub get
           if ($LASTEXITCODE -ne 0) { throw "No se resolvieron las dependencias Flutter" }
-          flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart lib/mir/mir_receiver_diagnostics.dart lib/mir/mir_about_page.dart lib/mir/mir_settings_router.dart lib/mir/mir_connection_theme.dart lib/mir/mir_receiver_layout.dart lib/desktop/pages/desktop_setting_page.dart lib/desktop/pages/desktop_tab_page.dart lib/desktop/pages/remote_page.dart lib/desktop/pages/server_page.dart lib/desktop/widgets/remote_toolbar.dart lib/desktop/widgets/tabbar_widget.dart
+          flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart lib/mir/mir_receiver_diagnostics.dart lib/mir/mir_about_page.dart lib/mir/mir_settings_router.dart lib/mir/mir_connection_theme.dart lib/mir/mir_receiver_layout.dart lib/mir/mir_receiver_process_probe.dart lib/desktop/pages/desktop_setting_page.dart lib/desktop/pages/desktop_tab_page.dart lib/desktop/pages/remote_page.dart lib/desktop/pages/server_page.dart lib/desktop/widgets/remote_toolbar.dart lib/desktop/widgets/tabbar_widget.dart
           if ($LASTEXITCODE -ne 0) { throw "Error de código Dart MiR" }
       - name: Probar geometría del receptor en todos los estados
         shell: pwsh
@@ -149,6 +150,9 @@ jobs:
           $portable = "mir/native-v2/dist/portable"
           Copy-Item "upstream/LICENCE" "$portable/LICENCE" -Force
           Copy-Item "mir/legacy-v1.5/payload/MiRemoto.ico" "$portable/MiR.ico" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.ps1" "$portable/MiR_Corregir_Receptor.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.cmd" "$portable/MiR_Corregir_Receptor.cmd" -Force
+          if (!(Test-Path "$portable/MiR_Corregir_Receptor.ps1") -or !(Test-Path "$portable/MiR_Corregir_Receptor.cmd")) { throw "Falta corrector de receptor" }
           @'
           MiR V2 — INTERFAZ NATIVA MI R (PREVIEW SIN FIRMA)
           Aplicación principal: MiR.exe. Motor remoto incluido.
