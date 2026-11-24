@@ -33,14 +33,26 @@ def verify(root: Path) -> None:
     ):
         if part not in s:
             raise RuntimeError("Receptor MiR: falta " + part)
-    # La zona variable se desplaza, y la zona de acciones queda fuera de
-    # SingleChildScrollView. Evita el corte de «Desconectar» con llamada.
-    layout=s[s.index("Widget buildConnectionCard"):s.index("class _AppIcon")]
-    assert layout.index("SingleChildScrollView(") < layout.index("primaryOnly: true")
-    assert layout.index("primaryOnly: false") < layout.index("primaryOnly: true")
-    assert "Expanded(" in layout
-    assert "border: Border(top: BorderSide(color: _miREdge" in layout
-    if s.count("_CmControlPanel(client: client, primaryOnly: true)") != 1:
+    # Dos vistas desplazables independientes, comprobadas también con
+    # flutter test en escenarios sin llamada, entrante, activa y solicitud.
+    layout = (root/"flutter/lib/mir/mir_receiver_layout.dart").read_text(
+        encoding="utf-8")
+    card = s[s.index("Widget buildConnectionCard"):s.index("class _AppIcon")]
+    assert "MiRReceiverLayout(" in card
+    assert card.index("primaryOnly: false") < card.index("primaryOnly: true")
+    for token in ("mir-receiver-information-scroll",
+                  "mir-receiver-action-scroll",
+                  "SingleChildScrollView(",
+                  "availableHeight * 0.68",
+                  "criticalActions"):
+        assert token in layout, "Layout del receptor sin: " + token
+    panel = s[s.index("class _CmControlPanel"):s.index("Widget _miRCallCard")]
+    assert "buildAuthorized(context)" in panel
+    assert "buildAuthorizedFooter(context)" in panel
+    assert panel.index("buildAuthorized(context)") < panel.index(
+        "buildAuthorizedFooter(context)")
+    assert "limits.maxWidth >= 250" in s
+    if s.count("primaryOnly: true") < 1:
         raise RuntimeError("Falta botonera fija inferior")
     if "color: _miRCard" not in s[s.index("buildUnAuthorized"):s.index("Widget buildButton")]:
         raise RuntimeError("Solicitud de acceso sin tema propio")
