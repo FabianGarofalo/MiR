@@ -45,20 +45,15 @@ Name: "{autodesktop}\MiR"; Filename: "{app}\{#AppExecutable}"; IconFilename: "{a
 
 [Tasks]
 Name: desktopicon; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Opciones adicionales:"; Flags: unchecked
-Name: unattended; Description: "Instalar receptor MiR para acceso desatendido"; GroupDescription: "Opciones adicionales:"; Flags: unchecked; Check: CanOfferMiRService
 
 [Run]
-Filename: "{app}\{#AppExecutable}"; Parameters: "--service-control create-service-with-rollback MiR ""{app}\{#AppExecutable}"""; Description: "Activar receptor MiR"; Flags: runhidden waituntilterminated; Tasks: unattended; Check: CanOfferMiRService
 Filename: "{app}\{#AppExecutable}"; Description: "Iniciar MiR"; Flags: nowait postinstall skipifsilent
 
 [Code]
-// El instalador NO altera, detiene ni reemplaza la instalación anterior.
-// Receptor propio optativo solamente si no existe ya otro servicio remoto.
-function CanOfferMiRService(): Boolean;
-begin
-  Result := not RegKeyExists(HKLM, 'SYSTEM\CurrentControlSet\Services\RustDesk')
-    and not RegKeyExists(HKLM, 'SYSTEM\CurrentControlSet\Services\MiR');
-end;
+// Esta entrega es exclusivamente el cliente MiR.
+// Su ejecutable Flutter NO está validado para reemplazar ni registrar un
+// servicio Windows. La gestión del receptor tendrá otro instalador nativo
+// después de las pruebas SCM, acceso desatendido y recuperación.
 
 // Aviso explícito: el instalador no sustituye un receptor previo. Sin
 // avisarlo, MiR podría abrir su portada nueva y seguir mostrando la ventana
