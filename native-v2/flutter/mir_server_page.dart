@@ -371,41 +371,60 @@ class ConnectionManagerState extends State<ConnectionManager>
 
 Widget buildConnectionCard(Client client) {
   return Consumer<ServerModel>(
-    builder: (context, value, child) => Column(
-      key: ValueKey(client.id),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // El contenido variable (permisos, chat y llamadas) siempre puede
-        // desplazarse. Nunca debe tapar ni recortar las acciones críticas.
-        Expanded(
-          child: SingleChildScrollView(
-            physics: const ClampingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _CmHeader(client: client),
-                if (client.type_() != ClientType.file &&
-                    client.type_() != ClientType.portForward &&
-                    client.type_() != ClientType.terminal &&
-                    !client.disconnected)
-                  _PrivilegeBoard(client: client),
-                _CmControlPanel(client: client, primaryOnly: false),
-              ],
+    builder: (context, value, child) => LayoutBuilder(
+      builder: (context, viewport) {
+        // El receptor es una ventana compacta. El panel de llamada y TODAS
+        // las acciones requieren su propio espacio: nunca se superponen a
+        // permisos/cabecera ni se recortan al cambiar el estado.
+        final availableHeight = viewport.hasBoundedHeight
+            ? viewport.maxHeight
+            : kConnectionManagerWindowSizeClosedChat.height;
+        final footerLimit = availableHeight * 0.68;
+        return Column(
+          key: ValueKey(client.id),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                key: const ValueKey('mir-receiver-information-scroll'),
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _CmHeader(client: client),
+                    if (client.type_() != ClientType.file &&
+                        client.type_() != ClientType.portForward &&
+                        client.type_() != ClientType.terminal &&
+                        !client.disconnected)
+                      _PrivilegeBoard(client: client),
+                    _CmControlPanel(client: client, primaryOnly: false),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-        // Aceptar/Cancelar o Elevar/Desconectar permanecen visibles al pie.
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.only(top: 4),
-          decoration: const BoxDecoration(
-            color: _miRBg,
-            border: Border(top: BorderSide(color: _miREdge, width: 0.7)),
-          ),
-          child: _CmControlPanel(client: client, primaryOnly: true),
-        ),
-      ],
-    ).paddingSymmetric(vertical: 4.0, horizontal: 8.0),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: footerLimit),
+              child: SingleChildScrollView(
+                key: const ValueKey('mir-receiver-action-scroll'),
+                physics: const ClampingScrollPhysics(),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(0, 6, 0, 6),
+                  decoration: const BoxDecoration(
+                    color: _miRBg,
+                    border: Border(
+                      top: BorderSide(color: _miREdge, width: 0.7),
+                    ),
+                  ),
+                  child: _CmControlPanel(client: client, primaryOnly: true),
+                ),
+              ),
+            ),
+          ],
+        ).paddingSymmetric(vertical: 4.0, horizontal: 8.0);
+      },
+    ),
   );
 }
 
@@ -896,16 +915,22 @@ class _CmControlPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (primaryOnly) {
-      return client.authorized
-          ? (client.disconnected
-              ? buildDisconnected(context)
-              : buildAuthorizedFooter(context))
-          : buildUnAuthorized(context);
+    if (!primaryOnly) {
+      // Los controles de llamada son acciones críticas: NO van en la zona
+      // desplazable de permisos, donde podían quedar parcialmente ocultos.
+      return const SizedBox.shrink();
     }
-    return client.authorized && !client.disconnected
-        ? buildAuthorized(context)
-        : const SizedBox.shrink();
+    if (!client.authorized) return buildUnAuthorized(context);
+    if (client.disconnected) return buildDisconnected(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Aceptar/Rechazar y Micrófono/Finalizar están siempre encima
+        // de Desconectar y se desplazan con el footer si la ventana es chica.
+        buildAuthorized(context),
+        buildAuthorizedFooter(context),
+      ],
+    );
   }
 
   Widget _miRCallCard({
