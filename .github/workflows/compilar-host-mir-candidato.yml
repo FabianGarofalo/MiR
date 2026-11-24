@@ -1,0 +1,219 @@
+name: MiR | Candidato receptor nativo Windows (AISLADO, NO INSTALAR)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/compilar-host-mir-candidato.yml'
+      - 'native-v2/host-candidate/**'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  host-windows:
+    runs-on: windows-2022
+    timeout-minutes: 120
+    env:
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      VCPKG_DEFAULT_TRIPLET: x64-windows-static
+      VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
+    steps:
+      - name: Descargar codigo de MiR
+        uses: actions/checkout@v4
+        with:
+          path: mir
+
+      - name: Descargar motor RustDesk exacto, incluyendo submodulos
+        uses: actions/checkout@v4
+        with:
+          repository: rustdesk/rustdesk
+          ref: 95cca3f661f635b3cc85c04935fe8d96d8f432ef
+          submodules: recursive
+          persist-credentials: false
+          path: upstream
+
+      - name: Recuperar puente Flutter/Rust para el mismo commit
+        uses: actions/download-artifact@v4
+        with:
+          name: mir-v2-bridge-generado
+          run-id: 45073323311
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: upstream
+
+      - name: Preparar compilador nativo LLVM
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "15.0.6"
+
+      - name: Flutter Windows 3.24.5
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.24.5"
+
+      - name: Preparar engine grafico compatible con RustDesk
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          flutter precache --windows
+          $flutterBin = (Get-Command flutter).Source
+          $flutterRoot = Split-Path (Split-Path $flutterBin -Parent) -Parent
+          Invoke-WebRequest -Uri "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip" -OutFile "engine-win.zip"
+          Expand-Archive -LiteralPath "engine-win.zip" -DestinationPath "flutter-engine" -Force
+          $engineTarget = Join-Path $flutterRoot "bin/cache/artifacts/engine/windows-x64-release"
+          Copy-Item "flutter-engine/*" "$engineTarget/" -Recurse -Force
+          & git -C $flutterRoot apply (Resolve-Path "upstream/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff").Path
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo aplicar parche Flutter fijado" }
+
+      - name: Preparar dependencias Rust y cache
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: upstream -> target
+          prefix-key: mir-host-native-windows
+
+      - name: Preparar vcpkg Windows
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: C:\vcpkg
+          vcpkgGitCommitId: 9e593bb18ea69cc5095e012465dcd675a822ed0d
+
+      - name: Instalar dependencias nativas (sin tocar el equipo del usuario)
+        shell: bash
+        working-directory: upstream
+        run: |
+          set -euo pipefail
+          "$VCPKG_ROOT/vcpkg" install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"
+
+      - name: Aplicar solo UI MiR y preservar nombre de servicio RustDesk
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python mir/native-v2/host-candidate/prepare_host.py --upstream upstream --repo mir
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo preparar receptor nativo" }
+          $core = Get-Content "upstream/src/core_main.rs" -Raw
+          if ($core.Contains('APP_NAME.write().unwrap() = "MiR"')) {
+            throw "HOST INSEGURO: cambio de nombre SCM RustDesk no permitido"
+          }
+          if (-not ((Get-Content "upstream/flutter/windows/CMakeLists.txt" -Raw).Contains('set(BINARY_NAME "rustdesk")'))) {
+            throw "No se preservo el nombre RustDesk del ejecutable de servicio"
+          }
+
+      - name: Analizar pantallas Flutter MiR
+        shell: pwsh
+        working-directory: upstream/flutter
+        run: |
+          flutter pub get
+          if ($LASTEXITCODE -ne 0) { throw "Dependencias Flutter incompatibles" }
+          flutter analyze --no-fatal-infos lib/mir lib/desktop/pages/server_page.dart
+          if ($LASTEXITCODE -ne 0) { throw "UI de receptor incompatible" }
+          flutter test test/mir_receiver_layout_test.dart --reporter expanded
+          if ($LASTEXITCODE -ne 0) { throw "Botones de receptor recortados" }
+
+      - name: Compilar motor de SERVICIO real y aplicacion Flutter
+        shell: pwsh
+        working-directory: upstream
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Compilacion nativa completa. PROHIBIDO reemplazar este paso por
+          # un launcher MiR.exe renombrado como RustDesk.exe.
+          python build.py --portable --flutter --skip-portable-pack --hwcodec --vram
+          if ($LASTEXITCODE -ne 0) { throw "Falló compilacion nativa del motor" }
+
+      - name: Verificar binario y emparejamiento con libreria nativa
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $hostDir = "upstream/flutter/build/windows/x64/runner/Release"
+          foreach ($f in @("rustdesk.exe","librustdesk.dll","flutter_windows.dll","data/app.so")) {
+            if (!(Test-Path "$hostDir/$f")) { throw "Host incompleto: $f" }
+          }
+          if (Test-Path "$hostDir/MiR.exe") {
+            throw "No se acepta un launcher MiR.exe renombrado como host"
+          }
+          $fullRust = "upstream/target/release/librustdesk.dll"
+          if (!(Test-Path $fullRust)) { throw "Falta motor Rust compilado para este host" }
+          $a = (Get-FileHash "$hostDir/librustdesk.dll" -Algorithm SHA256).Hash
+          $b = (Get-FileHash $fullRust -Algorithm SHA256).Hash
+          if ($a -ne $b) { throw "Host y motor son de distintas compilaciones" }
+          $dll=(Get-Item "$hostDir/librustdesk.dll").Length
+          if ($dll -lt 20000000) { throw "El motor nativo parece incompleto" }
+          Write-Host "Motor Rust recompilado y emparejado con RustDesk.exe: $a"
+
+      - name: Probar inicio REAL del servicio RustDesk en Windows aislado
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = (Resolve-Path "upstream/flutter/build/windows/x64/runner/Release/rustdesk.exe").Path
+          $logfile = "mir/native-v2/host-service-smoke.log"
+          "MiR Host | Prueba Windows SCM en runner aislado" | Set-Content $logfile
+          if (Get-Service RustDesk -ErrorAction SilentlyContinue) {
+            throw "Runner no limpio: ya existe servicio RustDesk"
+          }
+          $firewall = "MiR Host CI - bloquear salida RustDesk"
+          try {
+            # Evitar registro de identidad y conexiones remotas de un runner temporal.
+            New-NetFirewallRule -DisplayName $firewall -Direction Outbound -Action Block -Program $exe -Profile Any -ErrorAction Stop | Out-Null
+            & sc.exe create RustDesk binPath= ('"' + $exe + '" --service') start= demand
+            if ($LASTEXITCODE -ne 0) { throw "Windows no pudo registrar el servicio de prueba" }
+            & sc.exe start RustDesk
+            Start-Sleep -Seconds 12
+            $service = Get-Service RustDesk -ErrorAction Stop
+            ('SCM status: ' + $service.Status) | Add-Content $logfile
+            $info = Get-CimInstance Win32_Service -Filter "Name='RustDesk'"
+            ('SCM ImagePath: ' + $info.PathName) | Add-Content $logfile
+            if ($service.Status -ne 'Running') {
+              throw "Motor host no entro en Running como servicio RustDesk"
+            }
+            if ($info.PathName -notlike '*rustdesk.exe*--service*') {
+              throw "SCM registro un ejecutable distinto al host"
+            }
+            "SCM_START_OK (sin validar recepcion remota)" | Add-Content $logfile
+          } finally {
+            try {
+              & sc.exe stop RustDesk | Out-Null
+              Start-Sleep -Seconds 5
+              & sc.exe delete RustDesk | Out-Null
+            } catch {
+              Write-Warning "Error al limpiar servicio del runner: $_"
+            }
+            Remove-NetFirewallRule -DisplayName $firewall -ErrorAction SilentlyContinue
+          }
+
+      - name: Empaquetar solamente candidato NO INSTALABLE
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = "upstream/flutter/build/windows/x64/runner/Release"
+          $dest = "mir/native-v2/host-candidate/dist/MiR_Host_Candidato_NO_INSTALAR"
+          New-Item -ItemType Directory $dest -Force | Out-Null
+          Copy-Item "$source/*" "$dest/" -Recurse -Force
+          Copy-Item "upstream/LICENCE" "$dest/LICENCE" -Force
+          @'
+          MiR Host - CANDIDATO EXPERIMENTAL, NO INSTALAR EN EL EQUIPO RECEPTOR
+          RustDesk.exe es un ejecutable de servicio compilado desde el motor original.
+          NO es MiR.exe renombrado. UI Flutter de recepcion: MiR.
+          Prueba de Windows SCM en runner temporal: realizada sin salida a internet.
+          No se verifico transmision real, ID/contraseña existente, bloqueo de pantalla,
+          reinicio ni recepcion Android. No se entrega migrador.
+          No reemplazar C:\Program Files\MiR\Host ni detener el servicio existente.
+          '@ | Set-Content "$dest/NO_INSTALAR.txt" -Encoding UTF8
+          Compress-Archive -Path "$dest/*" -DestinationPath "mir/native-v2/host-candidate/dist/MiR_Host_Candidato_NO_INSTALAR.zip" -Force
+          Get-FileHash "mir/native-v2/host-candidate/dist/MiR_Host_Candidato_NO_INSTALAR.zip" -Algorithm SHA256 |
+            Select-Object Path, Hash | ConvertTo-Json |
+            Set-Content "mir/native-v2/host-candidate/dist/SHA256.json"
+
+      - name: Guardar candidato y pruebas (nunca instala nada)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiR-HOST-CANDIDATO-WINDOWS-NO-INSTALAR
+          path: |
+            mir/native-v2/host-candidate/dist/MiR_Host_Candidato_NO_INSTALAR.zip
+            mir/native-v2/host-candidate/dist/SHA256.json
+            mir/native-v2/host-identity-report.json
+            mir/native-v2/host-service-smoke.log
+          if-no-files-found: error
