@@ -1133,45 +1133,53 @@ class _CmControlPanel extends StatelessWidget {
     final showElevation = canElevate &&
         model.showElevation &&
         client.type_() == ClientType.remote;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Offstage(
-          offstage: !showElevation,
-          child: buildButton(
-            context,
-            color: MyTheme.accent,
-            onClick: () {
-              handleElevate(context);
-              windowManager.minimize();
-            },
-            icon: Icon(
-              Icons.security_rounded,
-              color: Colors.white,
-              size: 14,
-            ),
-            text: 'Elevate',
-            textColor: Colors.white,
-          ),
-        ),
-        Row(
+    final hasTransientControls =
+        client.incomingVoiceCall || client.inVoiceCall || client.fromSwitch;
+
+    final elevate = buildButton(
+      context,
+      color: MyTheme.accent,
+      onClick: () {
+        handleElevate(context);
+        windowManager.minimize();
+      },
+      icon: const Icon(
+        Icons.security_rounded, color: _miRAccent, size: 14),
+      text: 'Elevate',
+      textColor: _miRText,
+    );
+    final disconnect = buildButton(
+      context,
+      color: Colors.redAccent,
+      onClick: handleDisconnect,
+      text: 'Disconnect',
+      icon: const Icon(
+        Icons.link_off_rounded, color: _miRDanger, size: 14),
+      textColor: _miRText,
+    );
+
+    // En llamada entrante/activa dejamos Aceptar-Rechazar o
+    // Micrófono-Finalizar íntegros. Se reducen los botones globales a
+    // una sola fila sólo cuando el ancho permite leer sus etiquetas.
+    return LayoutBuilder(
+      builder: (context, limits) {
+        final sideBySide = showElevation &&
+            hasTransientControls && limits.maxWidth >= 250;
+        if (sideBySide) {
+          return Row(children: [
+            Expanded(child: elevate),
+            Expanded(child: disconnect),
+          ]).marginOnly(bottom: 4);
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: buildButton(context,
-                  color: Colors.redAccent,
-                  onClick: handleDisconnect,
-                  text: 'Disconnect',
-                  icon: Icon(
-                    Icons.link_off_rounded,
-                    color: Colors.white,
-                    size: 14,
-                  ),
-                  textColor: Colors.white),
-            ),
+            if (showElevation) elevate,
+            Row(children: [Expanded(child: disconnect)]),
           ],
-        )
-      ],
-    ).marginOnly(bottom: 4);
+        ).marginOnly(bottom: 4);
+      },
+    );
   }
 
   buildDisconnected(BuildContext context) {
