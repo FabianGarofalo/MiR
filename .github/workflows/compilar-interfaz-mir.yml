@@ -132,6 +132,8 @@ jobs:
           $new = "upstream/flutter/build/windows/x64/runner/Release"
           if (!(Test-Path "$new/MiR.exe")) { throw "El cliente recompilado no genera MiR.exe" }
           Copy-Item "$new/*" "mir/native-v2/dist/portable/" -Recurse -Force
+          Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.ps1" "mir/native-v2/dist/portable/MiR_Corregir_Receptor.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.cmd" "mir/native-v2/dist/portable/MiR_Corregir_Receptor.cmd" -Force
           $exe = (Resolve-Path "mir/native-v2/dist/portable/MiR.exe").Path
           $meta = (Get-Item $exe).VersionInfo
           if ($meta.ProductName -ne 'MiR') { throw "ProductName inesperado: $($meta.ProductName)" }
@@ -144,6 +146,8 @@ jobs:
         shell: pwsh
         run: |
           python mir/native-v2/verify_mir_release.py --portable mir/native-v2/dist/portable
+          & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "mir/native-v2/dist/portable/MiR_Corregir_Receptor.ps1" -Modo Diagnostico
+          if ($LASTEXITCODE -ne 0) { throw "MiR: diagnostico de procesos Windows no pudo ejecutarse" }
       - name: Generar portable y su instalador de prueba
         shell: pwsh
         run: |
