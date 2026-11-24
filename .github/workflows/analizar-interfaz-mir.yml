@@ -44,6 +44,7 @@ jobs:
           python3 native-v2/apply_mir_native.py --upstream upstream --repo .
           python3 native-v2/finish_mir_identity.py --upstream upstream --repo .
           python3 native-v2/apply_mir_home.py --upstream upstream --repo .
+          cp native-v2/flutter/mir_receiver_process_probe.dart upstream/flutter/lib/mir/mir_receiver_process_probe.dart
           python3 native-v2/apply_mir_settings.py --upstream upstream --repo .
           python3 native-v2/verify_mir_settings.py --upstream upstream
           python3 native-v2/verify_mir_home.py --upstream upstream
@@ -58,4 +59,4 @@ jobs:
         run: flutter pub get
       - name: Analizar archivo de interfaz MiR
         working-directory: upstream/flutter
-        run: flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart lib/mir/mir_receiver_diagnostics.dart lib/mir/mir_about_page.dart lib/mir/mir_settings_router.dart lib/desktop/pages/desktop_setting_page.dart lib/desktop/pages/desktop_tab_page.dart
+        run: flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart lib/mir/mir_receiver_diagnostics.dart lib/mir/mir_receiver_process_probe.dart lib/mir/mir_about_page.dart lib/mir/mir_settings_router.dart lib/desktop/pages/desktop_setting_page.dart lib/desktop/pages/desktop_tab_page.dart
