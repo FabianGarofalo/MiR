@@ -71,12 +71,16 @@ begin
     if Pos(Lowercase(ExpandConstant('{app}')), Lowercase(PathActual)) = 0 then
       ExistePrevio := True;
   if ExistePrevio then
-    MsgBox('Existe otro servicio receptor instalado. MiR no lo reemplazó. ' +
-           'Una solicitud puede seguir abriendo la interfaz antigua. ' +
-           'Abrí MiR > Mi equipo / Receptor > Proceso receptor real ' +
-           'para identificar qué versión atiende la conexión. ' +
-           'También podés ejecutar MiR_Corregir_Receptor.cmd sin ' +
-           'modificar servicios.', mbInformation, MB_OK);
+    MsgBox('El instalador instaló solamente el cliente MiR. ' +
+           'No modificó el servicio receptor existente. ' +
+           'Si aparece una ventana azul, esa ventana puede pertenecer ' +
+           'a la instalación anterior del servicio. ' +
+           'No desinstales ni reemplaces el servicio sin un ' +
+           'migrador nativo compatible y probado.', mbInformation, MB_OK)
+  else
+    MsgBox('Se instaló el cliente MiR. El acceso desatendido ANTES ' +
+           'de iniciar sesión requiere un receptor nativo validado. ' +
+           'Este instalador no registra un servicio Windows.', mbInformation, MB_OK);
 end;
 
 // Protección: si el servicio receptor usa archivos bajo MiR, impedimos una
