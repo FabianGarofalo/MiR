@@ -5,7 +5,7 @@
 #endif
 
 #define MyAppName "MiR"
-#define MyVersion "2.0.0-preview"
+#define MyVersion "2.7.0-preview"
 #define MyPublisher "EcoEtika S.A.S."
 #define AppExecutable "MiR.exe"
 
