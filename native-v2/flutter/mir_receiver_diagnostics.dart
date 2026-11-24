@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/consts.dart';
+import 'package:flutter_hbb/mir/mir_receiver_process_probe.dart';
 
 const _bg = Color(0xFF193236);
 const _edge = Color(0xFF315052);
@@ -137,6 +138,8 @@ class _MiRReceiverDiagnosticsState extends State<MiRReceiverDiagnostics> {
               'sesiones entrantes. Verificá con otra computadora usando '
               'el ID mostrado en Mi equipo.',
               style: TextStyle(color: _muted, fontSize: 11.5, height: 1.4)),
+            const SizedBox(height: 12),
+            const MiRReceiverRuntimeCard(),
             const SizedBox(height: 11),
             Wrap(spacing: 8, runSpacing: 8, children: [
               if (status.paused)

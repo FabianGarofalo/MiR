@@ -5,7 +5,7 @@
 #endif
 
 #define MyAppName "MiR"
-#define MyVersion "2.0.0-preview"
+#define MyVersion "2.7.0-preview"
 #define MyPublisher "EcoEtika S.A.S."
 #define AppExecutable "MiR.exe"
 
@@ -58,6 +58,30 @@ function CanOfferMiRService(): Boolean;
 begin
   Result := not RegKeyExists(HKLM, 'SYSTEM\CurrentControlSet\Services\RustDesk')
     and not RegKeyExists(HKLM, 'SYSTEM\CurrentControlSet\Services\MiR');
+end;
+
+// Aviso explícito: el instalador no sustituye un receptor previo. Sin
+// avisarlo, MiR podría abrir su portada nueva y seguir mostrando la ventana
+// receptora azul de otra instalación.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  PathActual: String;
+  ExistePrevio: Boolean;
+begin
+  if (CurStep <> ssPostInstall) or WizardSilent then
+    Exit;
+  ExistePrevio := RegKeyExists(HKLM, 'SYSTEM\CurrentControlSet\Services\RustDesk');
+  if RegQueryStringValue(HKLM, 'SYSTEM\CurrentControlSet\Services\MiR',
+       'ImagePath', PathActual) then
+    if Pos(Lowercase(ExpandConstant('{app}')), Lowercase(PathActual)) = 0 then
+      ExistePrevio := True;
+  if ExistePrevio then
+    MsgBox('Existe otro servicio receptor instalado. MiR no lo reemplazó. ' +
+           'Una solicitud puede seguir abriendo la interfaz antigua. ' +
+           'Abrí MiR > Mi equipo / Receptor > Proceso receptor real ' +
+           'para identificar qué versión atiende la conexión. ' +
+           'También podés ejecutar MiR_Corregir_Receptor.cmd sin ' +
+           'modificar servicios.', mbInformation, MB_OK);
 end;
 
 // Protección: si el servicio receptor usa archivos bajo MiR, impedimos una

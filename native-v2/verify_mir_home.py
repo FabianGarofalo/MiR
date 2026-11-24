@@ -41,7 +41,7 @@ def main() -> None:
                   "bind.mainGetMyId()", "bind.mainGetConnectStatus()",
                   "Habilitar recepción"):
         assert check in receiver, check
-    assert "MiR V2 | Desarrollado por EcoEtika S.A.S." in shell
+    assert "MiR V2.7 | Desarrollado por EcoEtika S.A.S." in shell
     assert "mainGotoInstall(" not in shell
     assert "Stop-Service" not in shell
     assert "RustDesk.exe" not in shell

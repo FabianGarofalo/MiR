@@ -421,7 +421,7 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
         _cardBox(child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('MiR V2 | Desarrollado por EcoEtika S.A.S.',
+            Text('MiR V2.7 | Desarrollado por EcoEtika S.A.S.',
                 style: TextStyle(color: _foreground, fontWeight: FontWeight.w600)),
             SizedBox(height: 9),
             Text('Tecnología de control remoto de código abierto integrada. Créditos y licencia en Acerca de MiR.',
@@ -595,7 +595,7 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: Row(children: [
               const Expanded(child: Text(
-                'MiR V2 | Desarrollado por EcoEtika S.A.S. | Distribución gratuita',
+                'MiR V2.7 | Desarrollado por EcoEtika S.A.S. | Distribución gratuita',
                 style: TextStyle(color: _muted, fontSize: 10),
                 maxLines: 2)),
               const SizedBox(width: 8),
