@@ -111,7 +111,9 @@ $services=@(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-
           details.add('Servicio MiR apunta a: ' + path);
         }
         if (name == 'rustdesk') {
-          details.add('Servicio RustDesk: ' + path);
+          final state = (service['State'] ?? '').toString();
+          details.add('Servicio RustDesk (' + state + '): ' + path);
+          if (state.toLowerCase() == 'running') differentApp = true;
         }
       }
       final alert = oldMiR || wrongService || differentApp;
