@@ -63,13 +63,17 @@ jobs:
       - name: Aplicar UI MiR nativa con acciones reales
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           python mir/native-v2/stage_components.py --upstream upstream --components mir/native_pending/lib --report mir/native-v2/integration-report.json
           python mir/native-v2/apply_mir_native.py --upstream upstream --repo mir --report mir/native-v2/native-patch-report.json
           python mir/native-v2/finish_mir_identity.py --upstream upstream --repo mir --report mir/native-v2/identity-report.json
           python mir/native-v2/apply_mir_home.py --upstream upstream --repo mir --report mir/native-v2/mir-home-report.json
+          python mir/native-v2/apply_mir_settings.py --upstream upstream --repo mir --report mir/native-v2/mir-settings-report.json
+          # Acerca de MiR se crea en apply_mir_settings; no verificarlo antes.
+          # El toolbar nativo original se verifica antes de transformar su color.
           python mir/native-v2/verify_native_patch.py --upstream upstream
           python mir/native-v2/verify_mir_identity.py --upstream upstream
-          python mir/native-v2/apply_mir_settings.py --upstream upstream --repo mir --report mir/native-v2/mir-settings-report.json
           python mir/native-v2/verify_mir_settings.py --upstream upstream
           python mir/native-v2/verify_mir_home.py --upstream upstream
           python mir/native-v2/apply_mir_connection_ui.py --upstream upstream --repo mir --report mir/native-v2/mir-connection-ui-report.json
