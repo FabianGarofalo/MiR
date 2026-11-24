@@ -8,6 +8,7 @@ import 'package:flutter_hbb/common/widgets/audio_input.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/mir/mir_connection_theme.dart';
+import 'package:flutter_hbb/mir/mir_receiver_layout.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:flutter_hbb/models/cm_file_model.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
@@ -371,41 +372,23 @@ class ConnectionManagerState extends State<ConnectionManager>
 
 Widget buildConnectionCard(Client client) {
   return Consumer<ServerModel>(
-    builder: (context, value, child) => Column(
+    builder: (context, value, child) => MiRReceiverLayout(
       key: ValueKey(client.id),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // El contenido variable (permisos, chat y llamadas) siempre puede
-        // desplazarse. Nunca debe tapar ni recortar las acciones críticas.
-        Expanded(
-          child: SingleChildScrollView(
-            physics: const ClampingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _CmHeader(client: client),
-                if (client.type_() != ClientType.file &&
-                    client.type_() != ClientType.portForward &&
-                    client.type_() != ClientType.terminal &&
-                    !client.disconnected)
-                  _PrivilegeBoard(client: client),
-                _CmControlPanel(client: client, primaryOnly: false),
-              ],
-            ),
-          ),
-        ),
-        // Aceptar/Cancelar o Elevar/Desconectar permanecen visibles al pie.
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.only(top: 4),
-          decoration: const BoxDecoration(
-            color: _miRBg,
-            border: Border(top: BorderSide(color: _miREdge, width: 0.7)),
-          ),
-          child: _CmControlPanel(client: client, primaryOnly: true),
-        ),
-      ],
-    ).paddingSymmetric(vertical: 4.0, horizontal: 8.0),
+      information: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _CmHeader(client: client),
+          if (client.type_() != ClientType.file &&
+              client.type_() != ClientType.portForward &&
+              client.type_() != ClientType.terminal &&
+              !client.disconnected)
+            _PrivilegeBoard(client: client),
+          _CmControlPanel(client: client, primaryOnly: false),
+        ],
+      ),
+      criticalActions: _CmControlPanel(
+        client: client, primaryOnly: true),
+    ),
   );
 }
 
@@ -896,16 +879,22 @@ class _CmControlPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (primaryOnly) {
-      return client.authorized
-          ? (client.disconnected
-              ? buildDisconnected(context)
-              : buildAuthorizedFooter(context))
-          : buildUnAuthorized(context);
+    if (!primaryOnly) {
+      // Los controles de llamada son acciones críticas: NO van en la zona
+      // desplazable de permisos, donde podían quedar parcialmente ocultos.
+      return const SizedBox.shrink();
     }
-    return client.authorized && !client.disconnected
-        ? buildAuthorized(context)
-        : const SizedBox.shrink();
+    if (!client.authorized) return buildUnAuthorized(context);
+    if (client.disconnected) return buildDisconnected(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Aceptar/Rechazar y Micrófono/Finalizar están siempre encima
+        // de Desconectar y se desplazan con el footer si la ventana es chica.
+        buildAuthorized(context),
+        buildAuthorizedFooter(context),
+      ],
+    );
   }
 
   Widget _miRCallCard({
@@ -1108,45 +1097,53 @@ class _CmControlPanel extends StatelessWidget {
     final showElevation = canElevate &&
         model.showElevation &&
         client.type_() == ClientType.remote;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Offstage(
-          offstage: !showElevation,
-          child: buildButton(
-            context,
-            color: MyTheme.accent,
-            onClick: () {
-              handleElevate(context);
-              windowManager.minimize();
-            },
-            icon: Icon(
-              Icons.security_rounded,
-              color: Colors.white,
-              size: 14,
-            ),
-            text: 'Elevate',
-            textColor: Colors.white,
-          ),
-        ),
-        Row(
+    final hasTransientControls =
+        client.incomingVoiceCall || client.inVoiceCall || client.fromSwitch;
+
+    final elevate = buildButton(
+      context,
+      color: MyTheme.accent,
+      onClick: () {
+        handleElevate(context);
+        windowManager.minimize();
+      },
+      icon: const Icon(
+        Icons.security_rounded, color: _miRAccent, size: 14),
+      text: 'Elevate',
+      textColor: _miRText,
+    );
+    final disconnect = buildButton(
+      context,
+      color: Colors.redAccent,
+      onClick: handleDisconnect,
+      text: 'Disconnect',
+      icon: const Icon(
+        Icons.link_off_rounded, color: _miRDanger, size: 14),
+      textColor: _miRText,
+    );
+
+    // En llamada entrante/activa dejamos Aceptar-Rechazar o
+    // Micrófono-Finalizar íntegros. Se reducen los botones globales a
+    // una sola fila sólo cuando el ancho permite leer sus etiquetas.
+    return LayoutBuilder(
+      builder: (context, limits) {
+        final sideBySide = showElevation &&
+            hasTransientControls && limits.maxWidth >= 250;
+        if (sideBySide) {
+          return Row(children: [
+            Expanded(child: elevate),
+            Expanded(child: disconnect),
+          ]).marginOnly(bottom: 4);
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: buildButton(context,
-                  color: Colors.redAccent,
-                  onClick: handleDisconnect,
-                  text: 'Disconnect',
-                  icon: Icon(
-                    Icons.link_off_rounded,
-                    color: Colors.white,
-                    size: 14,
-                  ),
-                  textColor: Colors.white),
-            ),
+            if (showElevation) elevate,
+            Row(children: [Expanded(child: disconnect)]),
           ],
-        )
-      ],
-    ).marginOnly(bottom: 4);
+        ).marginOnly(bottom: 4);
+      },
+    );
   }
 
   buildDisconnected(BuildContext context) {
