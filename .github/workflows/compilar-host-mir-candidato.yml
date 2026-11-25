@@ -121,6 +121,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           # Compilacion nativa completa. PROHIBIDO reemplazar este paso por
           # un launcher MiR.exe renombrado como RustDesk.exe.
+          # Upstream busca virtual-display en deps, aunque Cargo puede
+          # entregarla en target/release: empacar la DLL real, no omitirla.
+          python ../mir/native-v2/host-candidate/repair_packaging.py --upstream .
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo corregir empaquetado del host" }
           python build.py --portable --flutter --skip-portable-pack --hwcodec --vram
           if ($LASTEXITCODE -ne 0) { throw "Falló compilacion nativa del motor" }
 
