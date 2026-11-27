@@ -41,7 +41,11 @@ try {
   New-NetFirewallRule -DisplayName $firewallName -Direction Outbound -Action Block -Program $exe -Profile Any | Out-Null
   foreach ($mode in @('main','cm')) {
     $arguments = if($mode -eq 'main') { @() } else { @('--cm') }
-    $p = Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $HostDir -PassThru
+    if ($mode -eq 'main') {
+      $p = Start-Process -FilePath $exe -WorkingDirectory $HostDir -PassThru
+    } else {
+      $p = Start-Process -FilePath $exe -ArgumentList '--cm' -WorkingDirectory $HostDir -PassThru
+    }
     $observed = @()
     try {
       for ($i=0; $i -lt 24; $i++) {
