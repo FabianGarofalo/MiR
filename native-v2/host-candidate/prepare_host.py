@@ -91,6 +91,10 @@ def main() -> None:
     ensure_one(runner,
                'window_title = app_name + L" - Connection Manager";',
                'window_title = L"MiR - Receptor";')
+    # Ventana principal con marca MiR, SIN cambiar la identidad SCM RustDesk.
+    ensure_one(runner,
+               '  } else {\n    window_title = app_name;\n  }',
+               '  } else {\n    window_title = L"MiR";\n  }')
     verify_unmodified_service_identity(upstream)
 
     # El dashboard solo necesita verificar la interfaz, el motor permanece
@@ -103,6 +107,7 @@ def main() -> None:
         "service_name": "RustDesk",
         "host_executable": "RustDesk.exe",
         "ui_title": "MiR - Receptor",
+        "main_window_title": "MiR",
         "motor_recompiled_from_source": False,
         "service_tested": False,
         "user_host_modified": False,
