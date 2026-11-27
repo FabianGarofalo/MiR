@@ -113,6 +113,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "UI de receptor incompatible" }
           flutter test test/mir_receiver_layout_test.dart --reporter expanded
           if ($LASTEXITCODE -ne 0) { throw "Botones de receptor recortados" }
+          flutter test test/mir_wake_on_lan_test.dart --reporter expanded
+          if ($LASTEXITCODE -ne 0) { throw "La generación de paquetes WoL es inválida" }
 
       - name: Compilar motor de SERVICIO real y aplicacion Flutter
         shell: pwsh
