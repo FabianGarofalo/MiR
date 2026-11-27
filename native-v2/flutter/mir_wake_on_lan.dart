@@ -8,7 +8,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/bridge_generated.dart';
+import 'package:flutter_hbb/common.dart';
 import 'package:path_provider/path_provider.dart';
 
 class MiRWakeResult {
@@ -20,7 +20,7 @@ class MiRWakeResult {
 class MiRMagicPacket {
   static String normalizeMac(String value) {
     final cleaned =
-        value.toUpperCase().replaceAll(RegExp(r'[:.\\-\\s]'), '');
+        value.toUpperCase().replaceAll(':', '').replaceAll('-', '').replaceAll('.', '').replaceAll(' ', '');
     if (!RegExp(r'^[0-9A-F]{12}$').hasMatch(cleaned)) {
       throw const FormatException(
           'Ingresá una dirección MAC válida (ejemplo: 00:11:22:33:44:55).');
