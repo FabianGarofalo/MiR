@@ -78,6 +78,7 @@ def main() -> None:
         "flutter/lib/mir/mir_receiver_layout.dart": "flutter/mir_receiver_layout.dart",
         "flutter/lib/mir/mir_receiver_process_probe.dart": "flutter/mir_receiver_process_probe.dart",
         "flutter/test/mir_receiver_layout_test.dart": "flutter/test/mir_receiver_layout_test.dart",
+        "flutter/test/mir_wake_on_lan_test.dart": "flutter/test/mir_wake_on_lan_test.dart",
     }
     import shutil
     for target, source in patch_files.items():

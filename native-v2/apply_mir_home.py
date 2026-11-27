@@ -68,6 +68,15 @@ def main() -> None:
         raise RuntimeError("Falta diagnóstico del receptor portable MiR")
     receiver_target = upstream / "flutter/lib/mir/mir_receiver_diagnostics.dart"
     shutil.copyfile(receiver, receiver_target)
+
+    # Enviar Wake-on-LAN desde MiR reutiliza el FFI ya compilado para
+    # equipos descubiertos y permite magic packets UDP LAN por MAC,
+    # sin instalar servicios ni alterar el motor Rust.
+    wol_source = repo / "native-v2/flutter/mir_wake_on_lan.dart"
+    if not wol_source.is_file():
+        raise RuntimeError("Falta implementacion Wake-on-LAN de MiR.")
+    wol_target = upstream / "flutter/lib/mir/mir_wake_on_lan.dart"
+    shutil.copyfile(wol_source, wol_target)
     report = {
         "home_replaced": True,
         "widget": "MiRHomeShell",
@@ -77,6 +86,7 @@ def main() -> None:
         "sources": {
             "flutter/lib/desktop/pages/desktop_home_page.dart": hashlib.sha256(source.read_bytes()).hexdigest(),
             "flutter/lib/mir/mir_home_shell.dart": hashlib.sha256(target.read_bytes()).hexdigest(),
+            "flutter/lib/mir/mir_wake_on_lan.dart": hashlib.sha256(wol_target.read_bytes()).hexdigest(),
         },
         "security": "does not register, remove, or migrate receiver service",
         "build_validated": False,
