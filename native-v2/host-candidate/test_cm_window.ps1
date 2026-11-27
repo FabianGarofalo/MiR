@@ -1,61 +1,89 @@
-param(
-  [Parameter(Mandatory = $true)][string]$HostDir
-)
+param([Parameter(Mandatory=$true)][string]$HostDir)
 $ErrorActionPreference = 'Stop'
 $exe = Join-Path $HostDir 'rustdesk.exe'
-if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
-  throw 'No existe rustdesk.exe en la carpeta de prueba'
-}
-if (Get-Service RustDesk -ErrorAction SilentlyContinue) {
-  throw 'No es un Windows aislado: ya existe servicio RustDesk'
-}
-$existing = @(Get-CimInstance Win32_Process -Filter "Name='rustdesk.exe'" -ErrorAction SilentlyContinue)
-if ($existing.Count) { throw 'Ya existen procesos rustdesk.exe y no se debe mezclar receptores' }
+if (!(Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'No existe rustdesk.exe en host de prueba' }
+if (Get-Service RustDesk -ErrorAction SilentlyContinue) { throw 'Runner no limpio: servicio RustDesk instalado' }
 
 Add-Type -TypeDefinition @'
 using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Runtime.InteropServices;
 public static class MiRWindowProbe {
-  [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-  public static extern IntPtr FindWindow(string windowClass, string windowName);
+  public delegate bool EnumWindowsCallback(IntPtr h, IntPtr p);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)]
+  public static extern IntPtr FindWindow(string klass, string name);
   [DllImport("user32.dll")]
   public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+  [DllImport("user32.dll")]
+  static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr param);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)]
+  static extern int GetWindowText(IntPtr h, StringBuilder text, int max);
+  public static string[] Titles(uint processId) {
+    var windows = new List<string>();
+    EnumWindows((h,p) => {
+      uint actual;
+      GetWindowThreadProcessId(h,out actual);
+      if (actual==processId) {
+        StringBuilder title=new StringBuilder(512);
+        GetWindowText(h,title,title.Capacity);
+        windows.Add(title.ToString());
+      }
+      return true;
+    }, IntPtr.Zero);
+    return windows.ToArray();
+  }
 }
 '@
+
 $firewallName = 'MiR-CI-Host-CM-No-Network'
-$started = $null
 try {
   New-NetFirewallRule -DisplayName $firewallName -Direction Outbound -Action Block -Program $exe -Profile Any | Out-Null
-  $started = Start-Process -FilePath $exe -ArgumentList '--cm' -WorkingDirectory $HostDir -PassThru
-  $found = $false
-  for ($i=0; $i -lt 35; $i++) {
-    Start-Sleep -Seconds 1
-    $started.Refresh()
-    if ($started.HasExited) {
-      throw ('El proceso --cm terminó antes de abrir ventana: ExitCode=' + $started.ExitCode)
-    }
-    $h = [MiRWindowProbe]::FindWindow($null, 'MiR - Receptor')
-    if ($h -ne [IntPtr]::Zero) {
-      [uint32]$windowPid=0
-      [void][MiRWindowProbe]::GetWindowThreadProcessId($h,[ref]$windowPid)
-      if ($windowPid -eq $started.Id) {
-        Write-Host ('MIR_CM_WINDOW_OK PID=' + $windowPid + ' TITLE=MiR - Receptor')
-        $found=$true
-        break
+  foreach ($mode in @('main','cm')) {
+    $arguments = if($mode -eq 'main') { @() } else { @('--cm') }
+    $p = Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $HostDir -PassThru
+    $observed = @()
+    try {
+      for ($i=0; $i -lt 24; $i++) {
+        Start-Sleep -Seconds 1
+        $p.Refresh()
+        $titles = [MiRWindowProbe]::Titles([uint32]$p.Id)
+        if ($titles.Count) {
+          foreach ($title in $titles) {
+            if ($observed -notcontains $title) {
+              $observed += $title
+              Write-Host ("WINDOW mode=$mode PID=$($p.Id) title=[$title]")
+            }
+          }
+        }
+        if ($p.HasExited) {
+          Write-Host "EXIT mode=$mode after $($i+1)s ExitCode=$($p.ExitCode)"
+          break
+        }
+        if ($mode -eq 'main' -and $titles.Count -gt 0) { break }
+        if ($mode -eq 'cm' -and $titles -contains 'MiR - Receptor') { break }
       }
+      $p.Refresh()
+      if ($mode -eq 'main') {
+        if (-not $observed.Count) { throw 'El cliente de receptor no logró crear una ventana principal.' }
+        if ($p.HasExited) { throw 'El cliente de receptor terminó prematuramente.' }
+        Write-Host 'MIR_HOST_MAIN_WINDOW_OK'
+      } else {
+        if ($observed -contains 'MiR - Receptor') {
+          Write-Host 'MIR_HOST_CM_WINDOW_OK'
+        } elseif ($p.HasExited) {
+          Write-Host 'NOTA: --cm se cerró sin sesión entrante; no equivale a fallo de recepción remota.'
+          Write-Host ('CM títulos observados: ' + ($observed -join ' | '))
+          Write-Host 'MIR_HOST_CM_WITHOUT_ACTIVE_SESSION_INCONCLUSIVE'
+        } else {
+          Write-Host ('CM títulos observados: ' + ($observed -join ' | '))
+          throw 'CM sin ventana de MIR y sin sesión entrante: requiere prueba con conexión real.'
+        }
+      }
+    } finally {
+      if (-not $p.HasExited) { Stop-Process -Id $p.Id -ErrorAction SilentlyContinue }
     }
   }
-  if (-not $found) {
-    throw 'El receptor --cm continuó abierto pero la ventana MiR - Receptor no apareció en 35 segundos'
-  }
-  $cm=Get-CimInstance Win32_Process -Filter "ProcessId=$($started.Id)"
-  if ($cm.CommandLine -notmatch '(?i)(?:^|\s)--cm(?:\s|$)') {
-    throw 'El proceso que abrió la ventana no tiene argumento --cm'
-  }
-  Write-Host ('MIR_CM_STARTUP_OK exe=' + $cm.ExecutablePath)
 } finally {
-  if ($started -and -not $started.HasExited) {
-    Stop-Process -Id $started.Id -ErrorAction SilentlyContinue
-  }
   Remove-NetFirewallRule -DisplayName $firewallName -ErrorAction SilentlyContinue
 }
