@@ -1,0 +1,41 @@
+name: MiR | Smoke real ventana receptora --cm en Windows aislado
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/probar-host-cm-mir.yml'
+      - 'native-v2/host-candidate/test_cm_window.ps1'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  smoke-cm:
+    runs-on: windows-2022
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Obtener receptor compilado desde fuentes Rust
+        uses: actions/download-artifact@v4
+        with:
+          name: MiR-HOST-CANDIDATO-WINDOWS-NO-INSTALAR
+          run-id: 45514908305
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifact
+      - name: Extraer y validar paquete
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Get-ChildItem -LiteralPath artifact -Filter "MiR_Host_Candidato_NO_INSTALAR.zip" -File -Recurse | Select-Object -First 1
+          if (-not $zip) { throw "No existe el candidato que paso SCM" }
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath host-prueba -Force
+          foreach ($name in @('rustdesk.exe','librustdesk.dll','data/app.so','flutter_windows.dll','NO_INSTALAR.txt')) {
+            if (!(Test-Path "host-prueba/$name")) { throw "Host incompleto: $name" }
+          }
+          if (Get-Service RustDesk -ErrorAction SilentlyContinue) { throw "Runner no esta limpio" }
+      - name: Ejecutar --cm y verificar ventana MiR
+        shell: pwsh
+        run: |
+          ./native-v2/host-candidate/test_cm_window.ps1 -HostDir (Resolve-Path "host-prueba").Path
