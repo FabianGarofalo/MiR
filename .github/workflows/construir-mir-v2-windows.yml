@@ -186,6 +186,12 @@ jobs:
           Copy-Item "mir/legacy-v1.5/payload/MiRemoto.ico" "mir/native-v2/dist/portable/MiR.ico" -Force
           Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.ps1" "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.ps1" -Force
           Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.cmd" "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.cmd" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.ps1" "mir/native-v2/dist/portable/MiR_Activar_Receptor.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.cmd" "mir/native-v2/dist/portable/MiR_Activar_Receptor.cmd" -Force
+          $activation = Get-Content -Raw "mir/native-v2/dist/portable/MiR_Activar_Receptor.ps1"
+          foreach ($needle in @("--install-service", "Servicios", "INSTALAR", "ProgramFiles", "Running")) {
+            if (!$activation.Contains($needle)) { throw "No se empaqueta activacion controlada: $needle" }
+          }
           $audit = Get-Content -Raw "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.ps1"
           foreach ($needle in @("Get-CimInstance", "NO VERIFICADO", "ConvertTo-Json")) {
             if (!$audit.Contains($needle)) { throw "Falta comprobacion pre-login: $needle" }
