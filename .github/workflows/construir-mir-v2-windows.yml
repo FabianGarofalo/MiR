@@ -210,6 +210,37 @@ jobs:
           if ($proc.ExitCode -ne 0) { throw "MiR.exe --version devolvió $($proc.ExitCode)" }
           if (Get-Service -Name 'MiR' -ErrorAction SilentlyContinue) { throw "La prueba de arranque no debe instalar un servicio" }
           Write-Host "MiR.exe se inició sin RustDesk instalado en el runner y terminó correctamente."
+      - name: Probar receptor MiR como servicio en Windows aislado
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = (Resolve-Path "upstream/flutter/build/windows/x64/runner/Release/MiR.exe").Path
+          $name = 'MiR'
+          $rule = 'MiR CI receptor - bloquear red'
+          if (Get-Service -Name $name -ErrorAction SilentlyContinue) { throw 'Runner no esta limpio: servicio MiR ya existe' }
+          $created = $false
+          $blocked = $false
+          try {
+            New-NetFirewallRule -DisplayName $rule -Direction Outbound -Action Block -Program $exe -Profile Any -ErrorAction Stop | Out-Null
+            $blocked = $true
+            & sc.exe create $name binPath= ('"' + $exe + '" --service') start= demand
+            if ($LASTEXITCODE -ne 0) { throw 'Windows no pudo registrar servicio MiR' }
+            $created = $true
+            & sc.exe start $name
+            if ($LASTEXITCODE -ne 0) { throw 'El servicio MiR no arranco' }
+            Start-Sleep -Seconds 8
+            $svc = Get-CimInstance Win32_Service -Filter "Name='MiR'"
+            if (-not $svc -or $svc.State -ne 'Running') { throw 'MiR no permanece Running como servicio' }
+            if ($svc.PathName -notlike '*MiR.exe*--service*') { throw 'El servicio apunta a otro ejecutable' }
+            Write-Host 'SCM_OK: receptor MiR se inicia en runner Windows limpio sin red. No acredita acceso real antes del PIN.'
+          } finally {
+            if ($created) {
+              & sc.exe stop $name | Out-Null
+              Start-Sleep -Seconds 4
+              & sc.exe delete $name | Out-Null
+            }
+            if ($blocked) { Remove-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue }
+          }
       - name: Preparar portable con bibliotecas, marca y licencia
         shell: pwsh
         run: |
