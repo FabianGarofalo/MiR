@@ -34,7 +34,7 @@ try {
   }
   $processes = @(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop |
     Where-Object { $_.Name -in @('MiR.exe','rustdesk.exe') -and
-      $_.CommandLine -match '(?i)(?:^|\\s)--cm(?:\\s|$)' })
+      $_.CommandLine -match '(?i)(?:^|\s)--cm(?:\s|$)' })
   $report.procesos_receptor = $processes.Count
   if ($svc.Count -eq 0) {
     $report.recomendacion = 'Modo portable: no hay servicio para acceso antes del PIN. No instalar servicios sin validar el motor.'
