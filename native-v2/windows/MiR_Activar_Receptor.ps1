@@ -33,7 +33,16 @@ try {
   if($SoloVerificar) { Resultado 'No hay servicio receptor. La prueba previa al PIN sigue pendiente.' 0 }
   $principal=[Security.Principal.WindowsPrincipal]([Security.Principal.WindowsIdentity]::GetCurrent())
   if(-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    throw 'Se necesitan permisos de administrador para registrar el receptor.'
+    # El archivo debe existir dentro de Program Files para ser ejecutado elevado.
+    $script = Join-Path $installedRoot 'MiR_Activar_Receptor.ps1'
+    if(-not [string]::Equals($PSCommandPath,$script,[StringComparison]::OrdinalIgnoreCase)) {
+      throw 'La elevacion solo esta permitida desde el instalador MiR.'
+    }
+    Write-Host 'Solicitando autorizacion de administrador de Windows...'
+    $child=Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait -PassThru -ArgumentList @(
+      '-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $script + '"')
+    )
+    exit $child.ExitCode
   }
   Write-Host ''
   Write-Host 'MiR | Activar receptor nativo de Windows'
