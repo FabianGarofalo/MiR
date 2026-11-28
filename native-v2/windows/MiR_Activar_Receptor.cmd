@@ -1,7 +1,8 @@
 @echo off
 setlocal
-echo MiR - Activacion LOCAL del servicio receptor Windows
-echo El portable no instala servicios; este asistente requiere MiR instalado y permiso de administrador.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0MiR_Activar_Receptor.ps1"
+echo MiR - Activacion LOCAL del servicio receptor de Windows
+echo Se pedira permiso de administrador. NO ejecutar desde la unica conexion remota.
+set "MIR_RECEPTOR_DIR=%~dp0"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$f=Join-Path $env:MIR_RECEPTOR_DIR 'MiR_Activar_Receptor.ps1'; Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+$f+'"'))"
 echo.
 pause
