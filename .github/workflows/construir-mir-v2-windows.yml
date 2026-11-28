@@ -184,6 +184,12 @@ jobs:
           Copy-Item "$src/*" "mir/native-v2/dist/portable/" -Recurse -Force
           Copy-Item "upstream/LICENCE" "mir/native-v2/dist/portable/LICENCE" -Force
           Copy-Item "mir/legacy-v1.5/payload/MiRemoto.ico" "mir/native-v2/dist/portable/MiR.ico" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.ps1" "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.cmd" "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.cmd" -Force
+          $audit = Get-Content -Raw "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.ps1"
+          foreach ($needle in @("Get-CimInstance", "NO VERIFICADO", "ConvertTo-Json")) {
+            if (!$audit.Contains($needle)) { throw "Falta comprobacion pre-login: $needle" }
+          }
           @'
           MiR V2 — CANDIDATO NATIVO SIN VALIDACIÓN
           Desarrollado por EcoEtika S.A.S. | Distribución gratuita
