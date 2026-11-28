@@ -47,8 +47,10 @@ Name: "{autodesktop}\MiR"; Filename: "{app}\{#AppExecutable}"; IconFilename: "{a
 
 [Tasks]
 Name: desktopicon; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Opciones adicionales:"; Flags: unchecked
+Name: activar_receptor; Description: "Activar receptor de acceso desatendido en esta computadora (requiere pruebas locales)"; GroupDescription: "Opciones adicionales:"; Flags: unchecked
 
 [Run]
+Filename: "{app}\MiR_Activar_Receptor.cmd"; Description: "Configurar receptor MiR con autorización local"; Tasks: activar_receptor; Flags: postinstall skipifsilent
 Filename: "{app}\{#AppExecutable}"; Description: "Iniciar MiR"; Flags: nowait postinstall skipifsilent
 
 [Code]
