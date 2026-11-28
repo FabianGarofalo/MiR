@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/construir-mir-v2-windows.yml'
+      - 'native-v2/**'
+      - 'native_pending/**'
   workflow_dispatch:
 
 permissions:
@@ -193,6 +195,8 @@ jobs:
         shell: pwsh
         working-directory: upstream
         run: |
+          python ../mir/native-v2/host-candidate/repair_packaging.py --upstream .
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo corregir empaquetado de virtual-display DLL" }
           python build.py --portable --flutter --skip-portable-pack --hwcodec --vram
       - name: Prueba de arranque de MiR.exe sin instalación externa
         shell: pwsh
