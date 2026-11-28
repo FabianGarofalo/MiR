@@ -172,6 +172,38 @@ $services=@(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-
     }
   }
 
+  Future<void> _openActivation() async {
+    if (!Platform.isWindows) return;
+    final dir = File(Platform.resolvedExecutable).parent.path;
+    final activator = File(dir + Platform.pathSeparator +
+        'MiR_Activar_Receptor.cmd');
+    if (!await activator.exists()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('El activador no está incluido en esta versión. '
+            'Instalá una versión de MiR que incorpore el receptor.'),
+      ));
+      return;
+    }
+    try {
+      // Abrir asistente interactivo: el propio script valida instalación,
+      // existencia de otros servicios y autorización de administrador.
+      final safePath = activator.path.replaceAll("'", "''");
+      final safeDir = dir.replaceAll("'", "''");
+      final launch = "Start-Process -FilePath '" + safePath +
+          "' -WorkingDirectory '" + safeDir + "'";
+      final result = await Process.run('powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', launch]);
+      if (result.exitCode != 0) throw const FormatException('No se pudo abrir');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No se pudo abrir el activador de MiR. '
+            'Usá el acceso directo desde el menú Inicio de Windows.'),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_ReceiverReport>(
@@ -225,8 +257,15 @@ $services=@(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-
                     label: const Text('Corregir receptor'),
                     style: OutlinedButton.styleFrom(foregroundColor: _accent),
                   ),
+                if (Platform.isWindows)
+                  OutlinedButton.icon(
+                    onPressed: _openActivation,
+                    icon: const Icon(Icons.admin_panel_settings_outlined, size: 16),
+                    label: const Text('Activar acceso antes del PIN'),
+                    style: OutlinedButton.styleFrom(foregroundColor: _accent),
+                  ),
               ]),
-              const Text('No se modifica ningun servicio automaticamente. '
+              const Text('El acceso antes del PIN requiere MiR instalado y permiso de administrador. '
                   'Cerrar un receptor antiguo requiere confirmacion.',
                   style: TextStyle(color: _muted, fontSize: 10.5)),
             ],
