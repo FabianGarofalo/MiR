@@ -120,6 +120,14 @@ jobs:
           python mir/native-v2/verify_mir_home.py --upstream upstream
           python mir/native-v2/verify_native_patch.py --upstream upstream
           python mir/native-v2/verify_mir_identity.py --upstream upstream
+          python mir/native-v2/apply_mir_connection_ui.py --upstream upstream --repo mir --report mir/native-v2/mir-connection-ui-report.json
+          python mir/native-v2/verify_mir_connection_ui.py --upstream upstream
+          Copy-Item "mir/native-v2/flutter/mir_server_page.dart" "upstream/flutter/lib/desktop/pages/server_page.dart" -Force
+          Copy-Item "mir/native-v2/flutter/mir_receiver_layout.dart" "upstream/flutter/lib/mir/mir_receiver_layout.dart" -Force
+          Copy-Item "mir/native-v2/flutter/mir_receiver_process_probe.dart" "upstream/flutter/lib/mir/mir_receiver_process_probe.dart" -Force
+          Copy-Item "mir/native-v2/flutter/test/mir_receiver_layout_test.dart" "upstream/flutter/test/mir_receiver_layout_test.dart" -Force
+          Copy-Item "mir/native-v2/flutter/test/mir_wake_on_lan_test.dart" "upstream/flutter/test/mir_wake_on_lan_test.dart" -Force
+          python mir/native-v2/verify_mir_receiver_ui.py --upstream upstream
       - name: Instalar LLVM
         uses: KyleMayes/install-llvm-action@v2
         with:
@@ -171,6 +179,16 @@ jobs:
           VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
         run: |
           "$VCPKG_ROOT/vcpkg" install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"
+      - name: Validar UI receptora y Wake-on-LAN con pruebas Flutter
+        shell: pwsh
+        working-directory: upstream/flutter
+        run: |
+          flutter pub get
+          if ($LASTEXITCODE -ne 0) { throw "Dependencias Flutter fallaron" }
+          flutter test test/mir_wake_on_lan_test.dart --reporter expanded
+          if ($LASTEXITCODE -ne 0) { throw "Wake-on-LAN: magic packet inválido" }
+          flutter test test/mir_receiver_layout_test.dart --reporter expanded
+          if ($LASTEXITCODE -ne 0) { throw "Receptor: layout inválido" }
       - name: Compilar cliente Windows nativo
         shell: pwsh
         working-directory: upstream
@@ -207,6 +225,8 @@ jobs:
           Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.cmd" "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.cmd" -Force
           Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.ps1" "mir/native-v2/dist/portable/MiR_Activar_Receptor.ps1" -Force
           Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.cmd" "mir/native-v2/dist/portable/MiR_Activar_Receptor.cmd" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.ps1" "mir/native-v2/dist/portable/MiR_Corregir_Receptor.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.cmd" "mir/native-v2/dist/portable/MiR_Corregir_Receptor.cmd" -Force
           $activation = Get-Content -Raw "mir/native-v2/dist/portable/MiR_Activar_Receptor.ps1"
           foreach ($needle in @("--install-service", "Servicios", "INSTALAR", "ProgramFiles", "Running")) {
             if (!$activation.Contains($needle)) { throw "No se empaqueta activacion controlada: $needle" }
