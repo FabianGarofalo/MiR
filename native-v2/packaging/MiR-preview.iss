@@ -41,6 +41,7 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 
 [Icons]
 Name: "{autoprograms}\MiR"; Filename: "{app}\{#AppExecutable}"; IconFilename: "{app}\MiR.ico"
+Name: "{autoprograms}\MiR - Verificar acceso antes del PIN"; Filename: "{app}\MiR_Verificar_PreLogin.cmd"; WorkingDir: "{app}"; IconFilename: "{app}\MiR.ico"
 Name: "{autodesktop}\MiR"; Filename: "{app}\{#AppExecutable}"; IconFilename: "{app}\MiR.ico"; Tasks: desktopicon
 
 [Tasks]
