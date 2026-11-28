@@ -291,6 +291,23 @@ Widget _miRActionIcon(String tooltip, Widget? existing, String? asset) {
         "ítems de menú",
     )
 
+    # Acción explícita de pantalla segura: FFI nativo, no simular teclas.
+    # Permitir sólo sesiones Windows con permiso de teclado y fuera del modo vista.
+    toolbar = replace(
+        toolbar,
+        "menuChildrenGetter: (_) => [\\n              keyboardMode(),",
+        """menuChildrenGetter: (_) => [
+              if (pi.platform == kPeerPlatformWindows && !ffi.ffiModel.viewOnly)
+                MenuButton(
+                  child: const Text('Enviar Ctrl+Alt+Supr'),
+                  onPressed: () =>
+                      bind.sessionCtrlAltDel(sessionId: ffi.sessionId),
+                  ffi: ffi,
+                ),
+              keyboardMode(),""",
+        "Ctrl+Alt+Supr visible en opciones de teclado",
+    )
+
     (root / path).write_text(toolbar, encoding="utf-8")
     changed.append(path)
 
