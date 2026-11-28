@@ -54,8 +54,14 @@ try {
   # Revision adicional inmediatamente antes de registrar.
   if(@(Servicios).Count -gt 0) { Resultado 'Aparecio otro servicio. Cancelado sin modificaciones.' 3 }
   $p=Start-Process -FilePath $exe -ArgumentList '--install-service' -WorkingDirectory $PSScriptRoot -Wait -PassThru
-  Start-Sleep -Seconds 3
-  $after=@(Servicios)
+  # La instalación del motor puede terminar antes de que SCM lo declare Running.
+  $after=@()
+  for($attempt=0; $attempt -lt 25; $attempt++) {
+    Start-Sleep -Seconds 1
+    $after=@(Servicios)
+    if($after.Count -gt 1) { throw 'Aparecieron receptores múltiples. Revisar localmente sin modificar servicios.' }
+    if($after.Count -eq 1 -and $after[0].State -eq 'Running') { break }
+  }
   if($after.Count -ne 1) {
     throw 'El motor no dejo exactamente un servicio reconocido. NO se considera instalado.'
   }
@@ -66,6 +72,9 @@ try {
   }
   if($s.State -ne 'Running') {
     throw 'Se registro el servicio MiR, pero NO esta en ejecucion. Revisar con acceso local.'
+  }
+  if($s.StartMode -ne 'Auto') {
+    throw 'El receptor no quedo con inicio automatico. No se garantiza acceso antes del PIN tras reiniciar.'
   }
   Write-Host 'Servicio MiR detectado y en ejecucion.'
   Write-Host 'PENDIENTE: comprobar acceso desatendido real tras reinicio/WoL, en pantalla bloqueada y antes del PIN.'
