@@ -69,6 +69,13 @@ def main() -> None:
     receiver_target = upstream / "flutter/lib/mir/mir_receiver_diagnostics.dart"
     shutil.copyfile(receiver, receiver_target)
 
+    # Diagnóstico del proceso receptor real requerido por MiRReceiverDiagnostics.
+    probe_source = repo / "native-v2/flutter/mir_receiver_process_probe.dart"
+    if not probe_source.is_file():
+        raise RuntimeError("Falta el diagnóstico nativo del proceso receptor MiR")
+    probe_target = upstream / "flutter/lib/mir/mir_receiver_process_probe.dart"
+    shutil.copyfile(probe_source, probe_target)
+
     # Enviar Wake-on-LAN desde MiR reutiliza el FFI ya compilado para
     # equipos descubiertos y permite magic packets UDP LAN por MAC,
     # sin instalar servicios ni alterar el motor Rust.
@@ -87,6 +94,7 @@ def main() -> None:
             "flutter/lib/desktop/pages/desktop_home_page.dart": hashlib.sha256(source.read_bytes()).hexdigest(),
             "flutter/lib/mir/mir_home_shell.dart": hashlib.sha256(target.read_bytes()).hexdigest(),
             "flutter/lib/mir/mir_wake_on_lan.dart": hashlib.sha256(wol_target.read_bytes()).hexdigest(),
+            "flutter/lib/mir/mir_receiver_process_probe.dart": hashlib.sha256(probe_target.read_bytes()).hexdigest(),
         },
         "security": "does not register, remove, or migrate receiver service",
         "build_validated": False,
