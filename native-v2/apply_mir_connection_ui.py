@@ -295,7 +295,8 @@ Widget _miRActionIcon(String tooltip, Widget? existing, String? asset) {
     # Permitir sólo sesiones Windows con permiso de teclado y fuera del modo vista.
     toolbar = replace(
         toolbar,
-        "menuChildrenGetter: (_) => [\\n              keyboardMode(),",
+        """menuChildrenGetter: (_) => [
+              keyboardMode(),""",
         """menuChildrenGetter: (_) => [
               if (pi.platform == kPeerPlatformWindows && !ffi.ffiModel.viewOnly)
                 MenuButton(
