@@ -291,6 +291,25 @@ Widget _miRActionIcon(String tooltip, Widget? existing, String? asset) {
         "ítems de menú",
     )
 
+    # Acción real de atención segura en el menú de teclado (copia exacta del FFI).
+    # Anclar dentro de la clase para no depender del formato del menú tras los parches.
+    start_keyboard = toolbar.index("class _KeyboardMenu extends StatelessWidget")
+    end_keyboard = toolbar.index("  mouseSpeed() {", start_keyboard)
+    segment = toolbar[start_keyboard:end_keyboard]
+    needle = "              keyboardMode(),"
+    if segment.count(needle) != 1:
+        raise RuntimeError("Menú de teclado no identificable: no se puede publicar Ctrl+Alt+Supr")
+    segment = segment.replace(needle,
+        """              if (pi.platform == kPeerPlatformWindows && !ffi.ffiModel.viewOnly)
+                MenuButton(
+                  child: const Text('Enviar Ctrl+Alt+Supr'),
+                  onPressed: () =>
+                      bind.sessionCtrlAltDel(sessionId: ffi.sessionId),
+                  ffi: ffi,
+                ),
+""" + needle, 1)
+    toolbar = toolbar[:start_keyboard] + segment + toolbar[end_keyboard:]
+
     (root / path).write_text(toolbar, encoding="utf-8")
     changed.append(path)
 

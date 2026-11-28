@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/construir-mir-v2-windows.yml'
+      - 'native-v2/**'
+      - 'native_pending/**'
   workflow_dispatch:
 
 permissions:
@@ -76,6 +78,25 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: mir
+      - name: Validar sintaxis de activacion segura del receptor
+        shell: pwsh
+        run: |
+          $scripts = @(
+            "mir/native-v2/windows/MiR_Activar_Receptor.ps1",
+            "mir/native-v2/windows/MiR_Verificar_PreLogin.ps1"
+          )
+          foreach ($file in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $file).Path, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) { throw ("Error en " + $file + ": " + ($errors | Out-String)) }
+          }
+          $code = Get-Content -Raw $scripts[0]
+          foreach ($required in @("--install-service", "INSTALAR", "ProgramFiles", "Get-CimInstance", "Running")) {
+            if (!$code.Contains($required)) { throw "Falta control requerido del receptor: $required" }
+          }
+          Write-Host "Scripts MiR: sintaxis y protecciones basicas verificadas (sin instalar servicios)."
       - name: Base nativa fijada
         uses: actions/checkout@v4
         with:
@@ -101,6 +122,14 @@ jobs:
           python mir/native-v2/verify_mir_home.py --upstream upstream
           python mir/native-v2/verify_native_patch.py --upstream upstream
           python mir/native-v2/verify_mir_identity.py --upstream upstream
+          python mir/native-v2/apply_mir_connection_ui.py --upstream upstream --repo mir --report mir/native-v2/mir-connection-ui-report.json
+          python mir/native-v2/verify_mir_connection_ui.py --upstream upstream
+          Copy-Item "mir/native-v2/flutter/mir_server_page.dart" "upstream/flutter/lib/desktop/pages/server_page.dart" -Force
+          Copy-Item "mir/native-v2/flutter/mir_receiver_layout.dart" "upstream/flutter/lib/mir/mir_receiver_layout.dart" -Force
+          Copy-Item "mir/native-v2/flutter/mir_receiver_process_probe.dart" "upstream/flutter/lib/mir/mir_receiver_process_probe.dart" -Force
+          Copy-Item "mir/native-v2/flutter/test/mir_receiver_layout_test.dart" "upstream/flutter/test/mir_receiver_layout_test.dart" -Force
+          Copy-Item "mir/native-v2/flutter/test/mir_wake_on_lan_test.dart" "upstream/flutter/test/mir_wake_on_lan_test.dart" -Force
+          python mir/native-v2/verify_mir_receiver_ui.py --upstream upstream
       - name: Instalar LLVM
         uses: KyleMayes/install-llvm-action@v2
         with:
@@ -152,10 +181,22 @@ jobs:
           VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
         run: |
           "$VCPKG_ROOT/vcpkg" install --triplet x64-windows-static --x-install-root="$VCPKG_ROOT/installed"
+      - name: Validar UI receptora y Wake-on-LAN con pruebas Flutter
+        shell: pwsh
+        working-directory: upstream/flutter
+        run: |
+          flutter pub get
+          if ($LASTEXITCODE -ne 0) { throw "Dependencias Flutter fallaron" }
+          flutter test test/mir_wake_on_lan_test.dart --reporter expanded
+          if ($LASTEXITCODE -ne 0) { throw "Wake-on-LAN: magic packet inválido" }
+          flutter test test/mir_receiver_layout_test.dart --reporter expanded
+          if ($LASTEXITCODE -ne 0) { throw "Receptor: layout inválido" }
       - name: Compilar cliente Windows nativo
         shell: pwsh
         working-directory: upstream
         run: |
+          python ../mir/native-v2/host-candidate/repair_packaging.py --upstream .
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo corregir empaquetado de virtual-display DLL" }
           python build.py --portable --flutter --skip-portable-pack --hwcodec --vram
       - name: Prueba de arranque de MiR.exe sin instalación externa
         shell: pwsh
@@ -173,6 +214,37 @@ jobs:
           if ($proc.ExitCode -ne 0) { throw "MiR.exe --version devolvió $($proc.ExitCode)" }
           if (Get-Service -Name 'MiR' -ErrorAction SilentlyContinue) { throw "La prueba de arranque no debe instalar un servicio" }
           Write-Host "MiR.exe se inició sin RustDesk instalado en el runner y terminó correctamente."
+      - name: Probar receptor MiR como servicio en Windows aislado
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = (Resolve-Path "upstream/flutter/build/windows/x64/runner/Release/MiR.exe").Path
+          $name = 'MiR'
+          $rule = 'MiR CI receptor - bloquear red'
+          if (Get-Service -Name $name -ErrorAction SilentlyContinue) { throw 'Runner no esta limpio: servicio MiR ya existe' }
+          $created = $false
+          $blocked = $false
+          try {
+            New-NetFirewallRule -DisplayName $rule -Direction Outbound -Action Block -Program $exe -Profile Any -ErrorAction Stop | Out-Null
+            $blocked = $true
+            & sc.exe create $name binPath= ('"' + $exe + '" --service') start= demand
+            if ($LASTEXITCODE -ne 0) { throw 'Windows no pudo registrar servicio MiR' }
+            $created = $true
+            & sc.exe start $name
+            if ($LASTEXITCODE -ne 0) { throw 'El servicio MiR no arranco' }
+            Start-Sleep -Seconds 8
+            $svc = Get-CimInstance Win32_Service -Filter "Name='MiR'"
+            if (-not $svc -or $svc.State -ne 'Running') { throw 'MiR no permanece Running como servicio' }
+            if ($svc.PathName -notlike '*MiR.exe*--service*') { throw 'El servicio apunta a otro ejecutable' }
+            Write-Host 'SCM_OK: receptor MiR se inicia en runner Windows limpio sin red. No acredita acceso real antes del PIN.'
+          } finally {
+            if ($created) {
+              & sc.exe stop $name | Out-Null
+              Start-Sleep -Seconds 4
+              & sc.exe delete $name | Out-Null
+            }
+            if ($blocked) { Remove-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue }
+          }
       - name: Preparar portable con bibliotecas, marca y licencia
         shell: pwsh
         run: |
@@ -184,6 +256,20 @@ jobs:
           Copy-Item "$src/*" "mir/native-v2/dist/portable/" -Recurse -Force
           Copy-Item "upstream/LICENCE" "mir/native-v2/dist/portable/LICENCE" -Force
           Copy-Item "mir/legacy-v1.5/payload/MiRemoto.ico" "mir/native-v2/dist/portable/MiR.ico" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.ps1" "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.cmd" "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.cmd" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.ps1" "mir/native-v2/dist/portable/MiR_Activar_Receptor.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.cmd" "mir/native-v2/dist/portable/MiR_Activar_Receptor.cmd" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.ps1" "mir/native-v2/dist/portable/MiR_Corregir_Receptor.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.cmd" "mir/native-v2/dist/portable/MiR_Corregir_Receptor.cmd" -Force
+          $activation = Get-Content -Raw "mir/native-v2/dist/portable/MiR_Activar_Receptor.ps1"
+          foreach ($needle in @("--install-service", "Servicios", "INSTALAR", "ProgramFiles", "Running")) {
+            if (!$activation.Contains($needle)) { throw "No se empaqueta activacion controlada: $needle" }
+          }
+          $audit = Get-Content -Raw "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.ps1"
+          foreach ($needle in @("Get-CimInstance", "NO VERIFICADO", "ConvertTo-Json")) {
+            if (!$audit.Contains($needle)) { throw "Falta comprobacion pre-login: $needle" }
+          }
           @'
           MiR V2 — CANDIDATO NATIVO SIN VALIDACIÓN
           Desarrollado por EcoEtika S.A.S. | Distribución gratuita

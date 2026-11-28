@@ -41,19 +41,22 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 
 [Icons]
 Name: "{autoprograms}\MiR"; Filename: "{app}\{#AppExecutable}"; IconFilename: "{app}\MiR.ico"
+Name: "{autoprograms}\MiR - Verificar acceso antes del PIN"; Filename: "{app}\MiR_Verificar_PreLogin.cmd"; WorkingDir: "{app}"; IconFilename: "{app}\MiR.ico"
+Name: "{autoprograms}\MiR - Activar receptor (administrador)"; Filename: "{app}\MiR_Activar_Receptor.cmd"; WorkingDir: "{app}"; IconFilename: "{app}\MiR.ico"
 Name: "{autodesktop}\MiR"; Filename: "{app}\{#AppExecutable}"; IconFilename: "{app}\MiR.ico"; Tasks: desktopicon
 
 [Tasks]
 Name: desktopicon; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Opciones adicionales:"; Flags: unchecked
+Name: activar_receptor; Description: "Activar receptor de acceso desatendido en esta computadora (requiere pruebas locales)"; GroupDescription: "Opciones adicionales:"; Flags: unchecked
 
 [Run]
+Filename: "{app}\MiR_Activar_Receptor.cmd"; Description: "Configurar receptor MiR con autorización local"; Tasks: activar_receptor; Flags: postinstall skipifsilent
 Filename: "{app}\{#AppExecutable}"; Description: "Iniciar MiR"; Flags: nowait postinstall skipifsilent
 
 [Code]
-// Esta entrega es exclusivamente el cliente MiR.
-// Su ejecutable Flutter NO está validado para reemplazar ni registrar un
-// servicio Windows. La gestión del receptor tendrá otro instalador nativo
-// después de las pruebas SCM, acceso desatendido y recuperación.
+// El instalador entrega el cliente y un activador opt-in del motor nativo.
+// No registra servicios automaticamente. Requiere privilegios, consentimiento
+// y pruebas reales antes de declarar acceso desatendido previo al PIN.
 
 // Aviso explícito: el instalador no sustituye un receptor previo. Sin
 // avisarlo, MiR podría abrir su portada nueva y seguir mostrando la ventana
@@ -80,7 +83,7 @@ begin
   else
     MsgBox('Se instaló el cliente MiR. El acceso desatendido ANTES ' +
            'de iniciar sesión requiere un receptor nativo validado. ' +
-           'Este instalador no registra un servicio Windows.', mbInformation, MB_OK);
+           'Podés activar el servicio desde el menú Inicio > MiR - Activar receptor, con acceso físico a la PC. El instalador no registra servicios automáticamente.', mbInformation, MB_OK);
 end;
 
 // Protección: si el servicio receptor usa archivos bajo MiR, impedimos una

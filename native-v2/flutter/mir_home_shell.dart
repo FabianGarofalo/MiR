@@ -13,6 +13,7 @@ import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/mir/mir_settings_router.dart';
 import 'package:flutter_hbb/mir/mir_receiver_diagnostics.dart';
+import 'package:flutter_hbb/mir/mir_wake_on_lan.dart';
 import 'package:get/get.dart';
 
 const _background = Color(0xFF0B191A);
@@ -94,6 +95,22 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
       return;
     }
     connect(context, id, isFileTransfer: files);
+  }
+
+  Future<void> _wake() async {
+    final result = await showDialog<MiRWakeResult>(
+      context: context,
+      builder: (_) => MiRWakeDialog(initialId: _remoteId.text.trim()),
+    );
+    if (!mounted || result == null) return;
+    _remoteId.text = result.id;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(result.viaMac
+          ? 'Se envió la señal WoL por la red local. '
+            'Esto no confirma que el equipo despertó; intentá Conectar.'
+          : 'Se pidió WoL al motor para un equipo previamente descubierto '
+            'en LAN. Si no se conocía su MAC, no se habrá enviado señal.'),
+    ));
   }
 
   void _settings(SettingsTabKey page) {
@@ -179,10 +196,22 @@ class _MiRHomeShellState extends State<MiRHomeShell> {
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => _connect(files: true),
-                icon: const Icon(Icons.drive_folder_upload_outlined, size: 18),
-                label: const Text('Transferir archivos'),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 5,
+                alignment: WrapAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: _wake,
+                    icon: const Icon(Icons.power_settings_new_rounded, size: 18),
+                    label: const Text('Despertar equipo'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _connect(files: true),
+                    icon: const Icon(Icons.drive_folder_upload_outlined, size: 18),
+                    label: const Text('Transferir archivos'),
+                  ),
+                ],
               ),
             ),
           ],

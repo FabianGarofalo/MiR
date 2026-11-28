@@ -82,6 +82,7 @@ jobs:
           Copy-Item "mir/native-v2/flutter/mir_receiver_layout.dart" "upstream/flutter/lib/mir/mir_receiver_layout.dart" -Force
           Copy-Item "mir/native-v2/flutter/mir_receiver_process_probe.dart" "upstream/flutter/lib/mir/mir_receiver_process_probe.dart" -Force
           Copy-Item "mir/native-v2/flutter/test/mir_receiver_layout_test.dart" "upstream/flutter/test/mir_receiver_layout_test.dart" -Force
+          Copy-Item "mir/native-v2/flutter/test/mir_wake_on_lan_test.dart" "upstream/flutter/test/mir_wake_on_lan_test.dart" -Force
           python mir/native-v2/verify_mir_receiver_ui.py --upstream upstream
       - name: Flutter Windows 3.24.5
         uses: subosito/flutter-action@v2
@@ -109,7 +110,7 @@ jobs:
         run: |
           flutter pub get
           if ($LASTEXITCODE -ne 0) { throw "No se resolvieron las dependencias Flutter" }
-          flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart lib/mir/mir_receiver_diagnostics.dart lib/mir/mir_about_page.dart lib/mir/mir_settings_router.dart lib/mir/mir_connection_theme.dart lib/mir/mir_receiver_layout.dart lib/mir/mir_receiver_process_probe.dart lib/desktop/pages/desktop_setting_page.dart lib/desktop/pages/desktop_tab_page.dart lib/desktop/pages/remote_page.dart lib/desktop/pages/server_page.dart lib/desktop/widgets/remote_toolbar.dart lib/desktop/widgets/tabbar_widget.dart
+          flutter analyze --no-fatal-infos lib/mir/mir_home_shell.dart lib/mir/mir_receiver_diagnostics.dart lib/mir/mir_about_page.dart lib/mir/mir_settings_router.dart lib/mir/mir_connection_theme.dart lib/mir/mir_receiver_layout.dart lib/mir/mir_receiver_process_probe.dart lib/mir/mir_wake_on_lan.dart lib/desktop/pages/desktop_setting_page.dart lib/desktop/pages/desktop_tab_page.dart lib/desktop/pages/remote_page.dart lib/desktop/pages/server_page.dart lib/desktop/widgets/remote_toolbar.dart lib/desktop/widgets/tabbar_widget.dart
           if ($LASTEXITCODE -ne 0) { throw "Error de código Dart MiR" }
       - name: Probar geometría del receptor en todos los estados
         shell: pwsh
@@ -117,6 +118,8 @@ jobs:
         run: |
           flutter test test/mir_receiver_layout_test.dart --reporter expanded
           if ($LASTEXITCODE -ne 0) { throw "MIR: botones recortados o superpuestos en prueba de receptor" }
+          flutter test test/mir_wake_on_lan_test.dart --reporter expanded
+          if ($LASTEXITCODE -ne 0) { throw "MIR: paquete Wake-on-LAN inválido" }
       - name: Compilar nuevo MiR.exe y assets Flutter
         shell: pwsh
         working-directory: upstream/flutter
@@ -134,6 +137,10 @@ jobs:
           Copy-Item "$new/*" "mir/native-v2/dist/portable/" -Recurse -Force
           Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.ps1" "mir/native-v2/dist/portable/MiR_Corregir_Receptor.ps1" -Force
           Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.cmd" "mir/native-v2/dist/portable/MiR_Corregir_Receptor.cmd" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.ps1" "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.cmd" "mir/native-v2/dist/portable/MiR_Verificar_PreLogin.cmd" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.ps1" "mir/native-v2/dist/portable/MiR_Activar_Receptor.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.cmd" "mir/native-v2/dist/portable/MiR_Activar_Receptor.cmd" -Force
           $exe = (Resolve-Path "mir/native-v2/dist/portable/MiR.exe").Path
           $meta = (Get-Item $exe).VersionInfo
           if ($meta.ProductName -ne 'MiR') { throw "ProductName inesperado: $($meta.ProductName)" }
@@ -156,6 +163,10 @@ jobs:
           Copy-Item "mir/legacy-v1.5/payload/MiRemoto.ico" "$portable/MiR.ico" -Force
           Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.ps1" "$portable/MiR_Corregir_Receptor.ps1" -Force
           Copy-Item "mir/native-v2/windows/MiR_Corregir_Receptor.cmd" "$portable/MiR_Corregir_Receptor.cmd" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.ps1" "$portable/MiR_Verificar_PreLogin.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Verificar_PreLogin.cmd" "$portable/MiR_Verificar_PreLogin.cmd" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.ps1" "$portable/MiR_Activar_Receptor.ps1" -Force
+          Copy-Item "mir/native-v2/windows/MiR_Activar_Receptor.cmd" "$portable/MiR_Activar_Receptor.cmd" -Force
           if (!(Test-Path "$portable/MiR_Corregir_Receptor.ps1") -or !(Test-Path "$portable/MiR_Corregir_Receptor.cmd")) { throw "Falta corrector de receptor" }
           @'
           MiR V2 — INTERFAZ NATIVA MI R (PREVIEW SIN FIRMA)

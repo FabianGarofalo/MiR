@@ -32,6 +32,8 @@ def main() -> None:
         "_ControlMenu(", "_DisplayMenu(", "_KeyboardMenu(",
         "_VoiceCallMenu(", "_RecordMenu(", "_CloseMenu(",
         "bind.sessionRequestVoiceCall(sessionId: ffi.sessionId)",
+        "Enviar Ctrl+Alt+Supr",
+        "bind.sessionCtrlAltDel(sessionId: ffi.sessionId)",
     ):
         assert text in toolbar, "Falta componente visual o acción real: " + text
     for obsolete in (
